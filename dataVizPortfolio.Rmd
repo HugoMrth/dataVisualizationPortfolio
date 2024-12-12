@@ -1,0 +1,1346 @@
+---
+title: "Data Vizualisation Portfolio"
+author: "Hugo Marthinet"
+date: "10/12/2024"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_float: TRUE
+    toc_collaped: TRUE
+    toc_depth: 3
+    number_sections: TRUE
+    theme: lumen
+---
+
+<style type = "text/css">
+.main-container {
+  max-width: 1800px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r options, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  out.width = '100%'
+)
+```
+
+# Packages 
+
+```{r}
+# Tidy data
+library(tidyverse)
+library(lubridate)
+
+# Supplementary analysis
+library(survival)
+library(TraMineR)
+library(rstatix)
+library(epiR)
+
+# Data
+library(ISLR)
+
+# plotly
+library(plotly)
+
+# ggplot2 and addins
+library(ggplot2)
+library(ggfortify)
+library(ggpubr)
+library(gridExtra)
+library(ggseqplot)
+library(ggh4x)
+library(ggstatsplot)
+
+# Other graphics tools
+library(treemap)
+```
+
+# Basic plots 
+
+## Barplots
+
+
+### Frequencies
+
+```{r}
+# Simulate data for a barplot
+dataBarplot <- data.frame(
+  Episode = rep(c("First Covid-19 episode", "Last Covid-19 episode"), each = 63), # Two Covid episodes
+  Time = factor(rep(rep(c("Acute phase", "3 months or more", "Still persisting"), each = 21), 2),
+                levels = c("Acute phase", "3 months or more", "Still persisting")), # Symptoms last for a given time
+  Symptoms = rep(c("Abdominal pain", "Anxiety", "Chest pain", "Cognitive disfunction", "Cough", # List of possible symptoms
+                          "Depression", "Dizziness", "Fatigue", "Fever", "Gastrointestinal problem",
+                          "Headache", "Joint pain", "Loss of smell or taste", "Menstruation issue", "Neuralgia",
+                          "New allergies", "Shortness of breath", "Sleeping disorder", "Tachycardia", "Tinnitus",
+                          "Troubled vision"), 6),
+    N = c(0, 0, 0, 0, 2, 5, 9, 285, 404, 714, 646, 870, 765, 1873, 2632, 2106, 3181, 3844, # Number of cases
+          3985, 4921, 3529, 0, 0, 0, 0, 0, 0, 3, 38,  51,  49,  82, 116, 119, 287, 142, 448, 
+          190, 336, 158,  81, 502, 0, 1, 4, 6,  12,  12, 6, 315, 243, 192, 232, 212, 930, 394, 
+          394, 902, 781, 351, 460,  92,  1318, 0, 0, 0, 0, 0, 0, 0,  71,  62, 119, 148, 162, 
+          217, 123, 427, 347, 520, 669, 825, 730, 574, 0, 0, 0, 0, 1, 0, 0, 3, 7,  13, 7,  10,  
+          22, 8,  13,  40,  15,  34,  18,  17,  36, 0, 1, 1, 2, 1, 2, 2, 61, 67, 59, 51, 58, 85, 
+          217, 84, 200, 172, 79, 18, 115, 296)) %>%
+  # Total number of cases per symptoms and episode
+  mutate(Ntot = c(rep(by(N[Episode == "First Covid-19 episode"], Symptoms[Episode == "First Covid-19 episode"], sum), 3),
+                  rep(by(N[Episode == "Last Covid-19 episode"], Symptoms[Episode == "Last Covid-19 episode"], sum), 3)))
+
+
+
+# Initialize the plot with the dataset (DATA_ex2_1)
+ggplot(dataBarplot) + 
+  # Add a stacked bar chart (geom_col creates bars with heights determined by 'N')
+  geom_col(
+    mapping = aes(N, reorder(Symptoms, -N), fill = Time), # Map 'N' to x, 'Symptome' to y, and 'Temps' to fill color
+    width = 0.6,                              # Set the bar width
+    position = "stack"                        # Stack bars by the 'fill' variable
+  ) +
+  # Create facets (separate panels) for each level of the 'Episode' variable
+  facet_grid(cols = vars(Episode))  +
+  # Add a vertical line at x = 0 for reference
+  geom_vline(aes(xintercept = 0)) + 
+  # Customize the x-axis scale
+  scale_x_continuous(
+    limits = c(0, 6500),                     # Set the range for the x-axis
+    breaks = seq(0, 6000, 1000),             # Major tick marks every 1000 units
+    minor_breaks = seq(500, 6500, 500),      # Minor tick marks every 500 units
+    expand = c(0, 0)                         # Remove padding on the x-axis
+  ) + 
+  scale_fill_manual(
+    name = "Symptoms duration",
+    values = c('#28AFB0',  '#F6803C',  '#82354F')
+  ) +
+  # Add text labels to display 'Ntot' values next to each bar
+  geom_text(
+    mapping = aes(Ntot + 25, y = Symptoms, label = Ntot), # Position and content of the text
+    hjust = 0,                                            # Align text to the left of its position
+    nudge_x = 1                                           # Slightly nudge text horizontally
+  ) +
+  # Add titles and subtitles (empty here for now)
+  labs(title = "", subtitle = "") + 
+  # Customize the overall appearance of the plot
+  theme(
+    axis.title = element_blank(),                      # Remove axis titles
+    panel.background = element_rect(fill = "white"),   # Set panel background to white
+    panel.grid.major.x = element_line(color = "darkgray"), # Major grid lines for x-axis
+    panel.grid.minor.x = element_line(colour = "lightgray"), # Minor grid lines for x-axis
+    legend.position = "bottom"
+  )
+```
+
+```{r}
+# Simulate data for a barplot
+dataBarplot <- data.frame(
+  Time = factor(rep(c("Acute phase", "3 months or more", "Still persisting"), each = 14),
+                levels = c("Acute phase", "3 months or more", "Still persisting")), # Symptoms last for a given time
+  Symptoms = rep(c("Fatigue", "Loss of smell or taste", "Menstruation issue", "Neuralgia",  "Fever", "Gastrointestinal problem",
+                          "Headache", "Sleeping disorder", "Tachycardia", "Joint pain",
+                          "New allergies", "Shortness of breath", "Tinnitus",
+                          "Troubled vision"), 3),
+    N = c(285, 404, 714, 646, 870, 765, 1873, 2632, 2106, 3181, 3844, # Number of cases
+          3985, 4921, 3529, 38,  51,  49,  82, 116, 119, 287, 142, 448, 
+          190, 336, 158,  81, 502, 315, 243, 192, 232, 212, 930, 394, 
+          394, 902, 781, 351, 460,  92,  1318))
+
+
+# Initialize the plot with the dataset (DATA_ex2_1)
+ggplot(dataBarplot) + 
+  # Add a stacked bar chart (geom_col creates bars with heights determined by 'N')
+  geom_col(
+    mapping = aes(reorder(Symptoms, -N), N, fill = Time), # Map 'N' to x, 'Symptome' to y, and 'Temps' to fill color
+    width = 0.9,                              # Set the bar width
+    position = "dodge"                        # Stack bars by the 'fill' variable
+  ) +
+  # Add a vertical line at x = 0 for reference
+  geom_hline(aes(yintercept = 0)) + 
+  # Customize the x-axis scale
+  scale_y_continuous(
+    limits = c(0, 5500),                     # Set the range for the x-axis
+    breaks = seq(0, 5000, 1000),             # Major tick marks every 1000 units
+    minor_breaks = seq(500, 5500, 500),      # Minor tick marks every 500 units
+    expand = c(0, 0)                         # Remove padding on the x-axis
+  ) + 
+  scale_fill_manual(
+    name = "Symptoms duration",
+    values = c('#28AFB0',  '#F6803C',  '#82354F')
+  ) +
+  # Add text labels to display 'Ntot' values next to each bar
+  geom_text(
+    mapping = aes(x = Symptoms, y = N, label = N), # Position and content of the text
+    nudge_x = rep(c(-0.3, 0, 0.3), each = 14),
+    nudge_y = 120
+  ) +
+  # Add titles and subtitles (empty here for now)
+  labs(title = "", subtitle = "") + 
+  # Customize the overall appearance of the plot
+  theme(
+    axis.title = element_blank(),                      # Remove axis titles
+    panel.background = element_rect(fill = "white"),   # Set panel background to white
+    panel.grid.major.y = element_line(color = "darkgray"), # Major grid lines for x-axis
+    panel.grid.minor.y = element_line(colour = "lightgray"), # Minor grid lines for x-axis
+    legend.position = "bottom",
+    axis.text.x = element_text(
+      size = 10,                               # Font size
+      angle = 45,                              # Rotate text 45 degrees
+      vjust = 1,                               # Vertical alignment
+      hjust = 1                                # Horizontal alignment
+    )
+  )
+```
+
+### Proportions
+
+```{r}
+# Simulate data for a bar plot
+dataBarplot <- data.frame(
+  # Create a "Status" column with repeated categories (12 repetitions for each category)
+  Status = rep(c("Family member", "Active worker", "Retired worker"), each = 12),
+  # Create an "Affection" column, categorizing Covid-19 status, with ordered factor levels
+  Affection = factor(
+    rep(rep(c("No Covid-19", "Covid-19", "Long Covid-19"), each = 4), 3),
+    levels = c("No Covid-19", "Covid-19", "Long Covid-19")
+  ),
+  # Create a "Social_satisfaction" column, representing satisfaction levels, with ordered factor levels
+  Social_satisfaction = factor(
+    rep(c("Very satisfied", "Satisfied", "Unsatisfied", "Very unsatisfied"), 9),
+    levels = c("Very satisfied", "Satisfied", "Unsatisfied", "Very unsatisfied")
+  ),
+  # Define a numeric vector "N" representing counts corresponding to the combinations above
+  N = c(65, 255, 70, 16, 38, 131, 41, 7, 21, 123, 59, 10,
+        819, 2532, 591, 130, 640, 1723, 357, 38, 235, 1134, 468, 68,
+        1444, 4212, 677, 128, 528, 1198, 164, 20, 160, 575, 166, 27)
+) %>%
+  # Add new columns using dplyr's mutate function
+  mutate(
+    # Compute the total count (Ntot) for each "Affection" group within each "Status" group
+    Ntot = c(
+      # For "Family member", calculate totals per "Affection" group
+      rep(by(N[Status == "Family member"], Affection[Status == "Family member"], sum), each = 4),
+      # For "Active worker", calculate totals per "Affection" group
+      rep(by(N[Status == "Active worker"], Affection[Status == "Active worker"], sum), each = 4),
+      # For "Retired worker", calculate totals per "Affection" group
+      rep(by(N[Status == "Retired worker"], Affection[Status == "Retired worker"], sum), each = 4)
+    ),
+    # Calculate percentages (P) for each count (N) relative to the total count (Ntot) per group
+    P = N / Ntot * 100
+  )
+
+
+
+
+
+# Initialize the plot with the dataset (DATA_ex2_2)
+ggplot(dataBarplot) + 
+  # Add a stacked bar chart
+  geom_col(
+    mapping = aes(P, Affection, fill = Social_satisfaction), # Map 'P' to x, 'COVID_long_3mod' to y, and 'Q_E1' to fill
+    width = 0.6,                                   # Set the bar width
+    position = "stack",                            # Stack bars by the 'fill' variable
+    color = "white"                                # Add white border to bars
+  ) +
+  # Create facets (separate rows) for each level of the Status variable
+  facet_grid(rows = vars(Status)) +
+  # Add vertical lines at x = 0 and x = 100 for reference
+  geom_vline(aes(xintercept = 0)) + 
+  geom_vline(aes(xintercept = 100)) + 
+  # Customize the x-axis scale
+  scale_x_continuous(
+    limits = c(0, 100.2),                        # Set the range for the x-axis
+    breaks = seq(0, 100, 10),                    # Major tick marks every 10%
+    minor_breaks = seq(5, 95, 10),              # Minor tick marks every 5%
+    expand = c(0, 0),                            # Remove padding on the x-axis
+    labels = paste0(seq(0, 100, 10), "%")       # Append "%" to the tick labels
+  ) + 
+  # Add titles and subtitles (empty here for now)
+  labs(title = " ", subtitle = "") + 
+  # Customize the overall appearance of the plot
+  theme(
+    axis.title = element_blank(),                      # Remove axis titles
+    # axis.text.x = element_blank(),                  # Uncomment to hide x-axis labels
+    # axis.text.y = element_blank(),                  # Uncomment to hide y-axis labels
+    panel.background = element_rect(fill = "white"),   # Set panel background to white
+    panel.grid.major.x = element_line(color = "darkgray"), # Major grid lines for x-axis
+    panel.grid.minor.x = element_line(colour = "lightgray") # Minor grid lines for x-axis
+  ) +
+  # Customize the fill legend for the bar chart
+  scale_fill_manual(
+    "Social interactions",                               # Title for the legend
+    values = rev(RColorBrewer::brewer.pal(4, "RdYlGn")), # Reverse color palette
+    labels = c(                                        # Define labels for legend items
+      "Very satisfied",                           # Very satisfactory
+      "Satisfied",                         # Somewhat satisfactory
+      "Unsatisfied",                       # Somewhat unsatisfactory
+      "Very unsatisfied"                     # Very unsatisfactory
+    )
+  )
+```
+
+```{r}
+
+# Create the data frame for the bar plot
+dataBarplot <- data.frame(
+  # "LTI" column with long-term illness categories repeated for each age group
+  LTI = factor(rep(
+    c("Leukaemia", "Diabetes (insipidus & mellitus)", "Epilepsy", "Multiple Sclerosis", 
+      "Parkinson & affiliated", "Mental Illness"), 5),
+    levels = c("Leukaemia", "Diabetes (insipidus & mellitus)", "Epilepsy", "Multiple Sclerosis", 
+               "Parkinson & affiliated", "Mental Illness")
+  ),
+  
+  # "Age" column with age group categories repeated for each illness type
+  Age = factor(rep(
+    c("Under 18", "18 to 24 years old", "25 to 44 years old", "45 to 59 years old", "Over 60"), each = 6),
+    levels = c("Under 18", "18 to 24 years old", "25 to 44 years old", "45 to 59 years old", "Over 60")
+  ),
+  
+  # Randomly generated values for the "N" column representing counts
+  N = sample(100:300, 30)
+) %>% 
+  # Calculate the percentage contribution of each count (N) within each illness type (LTI)
+  mutate(
+    percent = as.numeric(unlist(by(N, LTI, function(x) {x / sum(x) * 100})))[rep(seq(1, 26, 5), 5) + rep(0:4, each = 6)],
+    # Label for percentages, shown only if the value exceeds 2%
+    lab = ifelse(percent > 2, paste0(formatC(percent, 1, format = "f"), "%"), "")
+  )
+
+# Initialize a vector for positioning text labels within each bar
+x_text <- rep(NA, nrow(dataBarplot))
+
+# Calculate the cumulative y-position for placing the text labels
+for (i in unique(dataBarplot$LTI)) {
+  for (j in 1:sum(dataBarplot$LTI == i)) {
+    ifelse(j == 1,
+           x_text[which(dataBarplot$LTI == i)[j]] <- dataBarplot$percent[dataBarplot$LTI == i][j] / 2,
+           x_text[which(dataBarplot$LTI == i)[j]] <- sum(dataBarplot$percent[dataBarplot$LTI == i][1:(j-1)]) +
+                          dataBarplot$percent[dataBarplot$LTI == i][j] / 2)
+  }
+}
+dataBarplot$x_text <- 100 - x_text  # Adjust text position to align with the plot
+
+# Generate the bar plot
+ggplot(data = dataBarplot) +
+  # Create stacked bars for proportions by age group
+  geom_col(
+    mapping = aes(x = LTI, y = percent, fill = Age),
+    width = 0.6,           # Bar width
+    position = "stack",    # Stacked bar position
+    color = "white"        # Bar border color
+  ) +
+  
+  # Add percentage labels to each segment of the bar
+  geom_text(
+    aes(x = LTI, y = x_text, label = lab),
+    size = 3,              # Font size
+    colour = "white"       # Text color
+  ) +
+  
+  # Add titles and axis labels
+  labs(
+    title = "Long term illnesses per age group", # Title
+    ylab = "Proportion",                        # Y-axis label
+    xlab = ""                                   # X-axis label (empty)
+  ) +
+  
+  # Customize the y-axis scale
+  scale_y_continuous(
+    breaks = seq(0, 100, 25),                   # Tick intervals
+    labels = c("0%", "25%", "50%", "75%", "100%") # Custom tick labels
+  ) +
+  
+  # Customize the fill colors for the "Age" categories
+  scale_fill_manual(
+    values = c('#1E5471', '#28AFB0', '#F6803C', '#82354F', '#E0D6FF'),
+    name = "Classe ATC1"                       # Legend title
+  ) +
+  
+  # Apply a minimal theme to the plot
+  theme_minimal() +
+  
+  # Customize the legend and x-axis text
+  theme(
+    legend.position = "right",                 # Position the legend on the right
+    axis.text.x = element_text(
+      size = 10,                               # Font size
+      angle = 45,                              # Rotate text 45 degrees
+      vjust = 1,                               # Vertical alignment
+      hjust = 1                                # Horizontal alignment
+    )
+  )
+
+```
+
+
+
+### Incidence rates
+
+```{r}
+ymax <- 200
+coeff <- 70/200
+
+
+dataBarplot <- data.frame(
+  year = 2012:2022,
+  n_cases = c(120, 87, 78, 96, 117, 153, 139, 164, 181, 188, 163),
+  pop = rep(300000, 11)
+) %>%
+  mutate(
+    IR = n_cases / pop * 100000,
+    IR_lower = epi.conf(cbind(n_cases, pop), ctype = "inc.rate", method = "exact")[, 2] * 100000,
+    IR_upper = epi.conf(cbind(n_cases, pop), ctype = "inc.rate", method = "exact")[, 3] * 100000
+  )
+
+
+ggplot(dataBarplot,
+       aes(
+         x = year,
+         y = n_cases,
+         width = 0.95
+       )) +
+  geom_col(
+    mapping = aes( fill = "Incidence"),
+    fill = "#AAC0AF" # couleur des barres
+  ) +
+  geom_line(
+    aes(
+      x = year,
+      y = IR,
+      colour = "Incidence rate" # Nmo dans la legende
+    ),
+    linetype = 1,
+    size = 1,
+    colour = "black"
+  ) + 
+  geom_errorbar(
+    aes(
+      x = year,
+      ymin = IR_lower,
+      ymax = IR_upper,
+      width = 0.2
+    )
+  ) +# Separation de l'axe y
+  scale_y_continuous(
+    expand = c(0,0),
+    limits = c(0, ymax),
+    breaks = seq(0, ymax, 25),
+    name = "Incidence",
+    sec.axis = sec_axis(
+      trans = ~.*coeff,
+      name = "Incidence rate",
+      breaks = seq(0, ymax*coeff, 10)
+    )
+  ) + 
+  scale_x_continuous(
+    breaks = 2012:2022,
+    labels = 2012:2022,
+    name = ""
+  ) +
+  theme_classic() + 
+  theme(
+    panel.grid.major.y = element_line(colour = "grey"),
+    panel.grid.minor.y = element_line(colour = "lightgray"),
+    axis.text.x = element_text(size = 11),
+    axis.line.y.left = element_line(color = "#AAC0AF"),
+    axis.title.y.left = element_text(color = "#AAC0AF"),
+    axis.text.y.left = element_text(color = "#AAC0AF")
+  ) + # Titres
+  labs(
+    title = "",
+    fill = "",
+    x = " ",
+    y = " "
+  ) 
+```
+
+## Boxplot
+
+### Classic
+
+```{r}
+# Create a data frame for boxplot visualization
+dataBoxplot <- data.frame(
+  med_id = rep(1:8, c(8, 3, 3, 5, 7, 6, 4, 11)),  # Assign medical operator IDs, repeated based on surgery counts
+  op_id = c(1:8, 1:3, 1:3, 1:5, 1:7, 1:6, 1:4, 1:11),  # Assign operation IDs for each surgery
+  setup = pmax(10 - rpois(47, lambda = 4), 1)  # Simulate 'setup' scores, capped at 10 and minimum of 1
+)
+
+# Create a data frame for the line plot (average setup values per operation ID)
+dataLine <- data.frame(
+  op_id = 1:max(dataBoxplot$op_id),  # Sequence of operation IDs
+  setup = as.numeric(by(dataBoxplot$setup, dataBoxplot$op_id, mean))  # Compute mean 'setup' scores by op_id
+)
+
+# Generate the plot using ggplot2
+ggplot(dataBoxplot) +
+  # Add a boxplot layer for setup scores grouped by operation ID
+  geom_boxplot(
+    aes(group = op_id, x = op_id, y = setup)  # Map operation ID and setup scores to boxplot
+  ) +
+  # Add a red line connecting the mean setup values for each operation ID
+  geom_line(
+    data = dataLine,          # Use the data frame with mean setup values
+    aes(op_id, setup),        # Map operation ID to x and mean setup to y
+    color = "red"             # Set line color to red
+  ) +
+  # Add red points for the mean setup values
+  geom_point(
+    data = dataLine,          # Use the data frame with mean setup values
+    aes(op_id, setup),        # Map operation ID to x and mean setup to y
+    color = "red",            # Set point color to red
+    shape = 16                # Use solid circle for points
+  ) +
+  # Add a subtitle with the p-value from a linear model (setup ~ op_id)
+  labs(subtitle = paste0("p=", round(summary(lm(setup ~ op_id, dataBoxplot))$coefficient[2, 4], 4))) +
+  # Label the y-axis
+  ylab("Surgery setup grade (out of 10)") +
+  # Label the x-axis
+  xlab("Number of surgeries") +
+  # Customize the y-axis scale
+  scale_y_continuous(
+    limits = c(0, 10),         # Set y-axis limits between 0 and 10
+    breaks = 0:10,             # Add breaks at each integer value
+    expand = c(0, 0)           # Remove padding on the axis
+  ) +
+  # Customize the x-axis scale
+  scale_x_discrete(
+    limits = 1:max(dataBoxplot$op_id),  # Limit x-axis to the range of operation IDs
+    breaks = 1:max(dataBoxplot$op_id)  # Add breaks at each operation ID
+  ) +
+  # Apply a minimal theme for clean visualization
+  theme_minimal()
+
+```
+
+
+
+```{r}
+# Simulate data for a boxplot
+dataBoxplot <- data.frame(
+  id = rep(1:47, 5),  # 47 subjects, repeated 5 times for each group
+  times = rep(paste0("Month ", c(0, 3, 6, 9, 12)), each = 47),  # 5 time points
+  val = c(  # Simulate values for each time point with different means and SDs
+    rnorm(n = 47, mean = 2, sd = 1),  # Group 1 (mean=2, sd=1)
+    rnorm(n = 47, mean = 5, sd = 1),  # Group 2 (mean=5, sd=1)
+    rnorm(n = 47, mean = 5, sd = 2),  # Group 3 (mean=5, sd=2)
+    rnorm(n = 47, mean = 8, sd = 2),  # Group 4 (mean=8, sd=2)
+    rnorm(n = 47, mean = 8, sd = 5)   # Group 5 (mean=8, sd=5)
+  )
+)
+dataBoxplot$val <- pmax(0, dataBoxplot$val)
+
+# Perform ANOVA to test differences between the groups
+res.aov <- anova_test(
+  data = dataBoxplot,
+  dv = val,     # Dependent variable: val (size)
+  wid = id,     # Within-subjects factor: id
+  between = times  # Between-subjects factor: times
+)
+
+# Pairwise t-tests to compare each group with group 1, adjusting for multiple comparisons using Bonferroni correction
+pwc <- dataBoxplot %>%
+  pairwise_t_test(
+    val ~ times,  # Dependent variable 'val' across levels of 'times'
+    paired = TRUE,  # Paired samples
+    ref.group = "Month 0",  # Use "n°1" as the reference group
+    p.adjust.method = "bonferroni"  # Apply Bonferroni correction to p-values
+  ) %>%
+  add_xy_position(x = "times")  # Add xy-position for displaying p-values
+
+# Create the boxplot with individual data points and p-values
+ggboxplot(
+  dataBoxplot,  # Data for the boxplot
+  x = "times",  # Group by 'times'
+  y = "val",    # Plot 'val' (size) on the y-axis
+  add = "point",  # Add individual data points to the boxplot
+  ylab = "Size",  # Label for the y-axis
+  xlab = ""      # No label for the x-axis
+) +
+  scale_y_continuous(
+    limits = c(0, max(dataBoxplot$val)),
+    expand = c(0, 0)
+  ) +
+  stat_pvalue_manual(pwc) +  # Add p-values from pairwise t-tests
+  labs(
+    subtitle = get_test_label(res.aov, detailed = FALSE),  # Subtitle for ANOVA result
+    caption = "2 by 2 testing: Student's t-test, p-value adjustment: Bonferroni"  # Caption explaining test details
+  )
+
+```
+
+### Violins
+
+```{r}
+ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
+  ylab("Workers raw wage") +
+  xlab("Education level")
+```
+
+# Models outputs
+
+## Survival curve
+
+```{r}
+n <- 1000  # Number of individuals
+df <- data.frame(
+  id = 1:n,
+  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
+  event = factor(sample(0:1, n, prob = c(0.4, 0.6), replace = TRUE)),  # Event (0 = censored, 1 = sick, 2 = dead)
+  exposure = sample(c("Unexposed", "Exposed"), n, replace = TRUE)  # Exposure status (Unexposed or Exposed)
+)
+df$time[df$event == 0] <- 365  # Set time to 365 for censored observations (event == 0)
+
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = df) # Fitting a Survival Model
+
+ymax <- 30
+autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +
+  geom_step(aes(linetype = strata, color = event), size = 0.8) +
+  scale_linetype_manual(name = "Group",
+                        values = c('dotted', 'solid'),
+                        labels = c('Non-exposed', 'Exposed')) +
+  scale_color_manual(name = "Event",
+                     values = c("white", "#1C4073"),
+                     labels = c(' ', "Hospitalised")) +
+  labs(x = "Période de suivi (jours)", y = "Proportion", title = "") +
+  geom_vline(aes(xintercept = 0), size = 1) +
+  geom_hline(aes(yintercept = 1-ymax/100), size = 1) +
+  scale_y_reverse(limits = 1-c(ymax/100, 1), breaks = 1-seq(ymax/100, 1, 0.1),
+                  labels = paste0(seq(ymax, 100, 10), "%"), expand = c(0,0)) +
+  scale_x_continuous(breaks = seq(0, 360, 60), expand = c(0,0)) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_text(face="bold", colour="black", size = 12),
+        axis.title.y = element_text(face="bold", colour="black", size = 12),
+        legend.title = element_text(face="bold", size = 10),
+        panel.grid.major.y = element_line(colour = "lightgray", size = 0.3),
+        panel.grid.minor.x = element_blank(),
+        legend.position = c(0.15, 0.30),
+        legend.background = element_rect(fill = "transparent", color = "white"))
+```
+
+
+
+
+```{r}
+# Simulating survival data
+n <- 1000  # Number of individuals
+df <- data.frame(
+  id = 1:n,
+  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
+  event = factor(sample(0:2, n, prob = c(0.4, 0.5, 0.1), replace = TRUE)),  # Event (0 = censored, 1 = sick, 2 = dead)
+  exposure = sample(c("Unexposed", "Exposed"), n, replace = TRUE)  # Exposure status (Unexposed or Exposed)
+)
+df$time[df$event == 0] <- 365  # Set time to 365 for censored observations (event == 0)
+
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = df) # Fitting a Survival Model
+
+
+# Plot a survival curve with `autoplot` and enhance it with additional layers
+autoplot(fit, surv.linetype = 'blank', surv.colour = NA) + 
+  # Add step lines representing survival curves
+  geom_step(
+    aes(linetype = strata, color = event), # Map line type to `strata` and color to `event`
+    size = 0.8                             # Set line thickness
+  ) +
+  # Customize the line types for survival curves
+  scale_linetype_manual(
+    name = "Group",                         # Title for the legend
+    values = c('dashed', 'solid'),          # Define line types: dashed for unexposed, solid for exposed
+    labels = c('Unexposed', 'Exposed')      # Labels for the legend
+  ) +
+  # Customize the colors for the event states
+  scale_color_manual(
+    name = "State",                         # Title for the legend
+    values = c("#AAC0AF", "#1C4073", "#B28B84"), # Colors for Healthy, Sick, and Dead states
+    labels = c('Healthy', 'Sick', 'Dead')   # Labels for the legend
+  ) +
+  # Add axis labels and a title
+  labs(
+    x = "Followup period (days)",           # X-axis label
+    y = "Proportion of the population",     # Y-axis label
+    title = ""                              # Title (empty for now)
+  ) +
+  # Add a vertical reference line at x = 0
+  geom_vline(
+    aes(xintercept = 0), # Position of the line
+    size = 1             # Thickness of the line
+  ) +
+  # Customize the y-axis scale
+  scale_y_continuous(
+    limits = c(0, 1),                      # Set the y-axis range from 0 to 1
+    breaks = seq(0, 1, 0.1),               # Major ticks every 0.1
+    labels = paste0(seq(0, 100, 10), "%"), # Convert tick labels to percentages
+    expand = c(0, 0)                       # Remove padding on the y-axis
+  ) +
+  # Customize the x-axis scale
+  scale_x_continuous(
+    breaks = seq(0, 360, 60),              # Major ticks every 60 days
+    expand = c(0, 0)                       # Remove padding on the x-axis
+  ) +
+  # Apply a minimal theme for a clean appearance
+  theme_minimal() +
+  # Customize specific theme elements
+  theme(
+    plot.title = element_text(hjust = 0.5),          # Center-align the plot title
+    axis.title.x = element_text(
+      face = "bold",                                 # Make x-axis title bold
+      colour = "black",                              # Set title color to black
+      size = 12                                      # Set font size
+    ),
+    axis.title.y = element_text(
+      face = "bold",                                 # Make y-axis title bold
+      colour = "black",                              # Set title color to black
+      size = 12                                      # Set font size
+    ),
+    legend.title = element_text(face = "bold", size = 10), # Style legend titles
+    panel.grid.major.y = element_line(
+      colour = "lightgray",                          # Light gray major grid lines on the y-axis
+      size = 0.3                                     # Set line thickness
+    ),
+    panel.grid.minor.x = element_blank()             # Remove minor grid lines on the x-axis
+  )
+```
+
+
+
+
+# Epidemiology related plots
+
+## Epidemic curve
+
+```{r}
+dataCurve <- data.frame(
+  Incident = c(rep("Severe Covid-19 case", 464), rep("Severe adverse reaction", 76)),
+  Date = rep(seq.POSIXt(as_datetime("2020-06-01 00:00:00", tz = "CET"), 
+                        as_datetime("2023-02-01 00:00:00", tz = "CET"), by = "month"), 
+             c(19, 11, 11,  9, 13, 21, 58, 49, 73, 83, 33, 19, 14 ,13, 16, 11,
+                      3,  3, 11, 26,  8,  2,  4,  3,  8,  1,  4,  2,  4,  4,  2, 1,  1))
+)
+
+dataDoses <- data.frame(
+  Date = seq.Date(as.Date("2021-01-01"), as.Date("2023-01-01"), by = "month"),
+  Ndoses = c(4573, 5343,   5474,  27699,  73329, 137575, 109853,  62694,  29315,   9604,
+             10456,  95054,  81274,  17859,   3998,   2385,   2384,   1772,   1931,   1471,
+             2326,   1872,   7005,   9746,   4759)
+)
+
+monthly_breaks <- seq.POSIXt(
+  from = as_datetime("2020-01-01 00:00:00", tz = "CET"),
+  to = as_datetime("2023-04-01 00:00:00", tz = "CET"),
+  by = "month"
+)
+
+ymax <- 87.5
+coeff <- (140000 / ymax) 
+dataDoses$Ndoses <- dataDoses$Ndoses / coeff
+
+# Initialize the plot with a dataset (DATA_ex1_1)
+ggplot(dataCurve) + 
+  # Add a histogram with dodged bars, colored by the "Incident" variable
+  geom_histogram(
+    mapping = aes(x = Date, fill = Incident), # Map 'cas_date' to x-axis, and 'Incident' to fill
+    breaks = monthly_breaks,                     # Use specified monthly breaks
+    closed = "left",                             # Define intervals as left-closed
+    color = "white",                             # Set white border for bars
+    position = "dodge"                           # Dodge bars side by side
+  ) + 
+  # Add horizontal grid lines with white color
+  geom_hline(yintercept = 1:ymax, color = "white") + 
+  # Add vertical reference lines for specific dates
+  geom_vline(
+    xintercept = as_datetime(c("2021-01-01 00:00:00", "2022-01-01 00:00:00"), tz = "CET"), # Define dates as datetime objects
+    color = "lavenderblush4",                    # Set line color
+    size = 1                                     # Set line thickness
+  )  +
+  # Annotate rectangular periods of interest
+  annotate(
+    "rect",                                     # Specify rectangle annotation
+    xmin = as_datetime("2020-04-01 00:00:00", tz = "CET"), # Start of the rectangle
+    xmax = as_datetime("2020-06-01 00:00:00", tz = "CET"), # End of the rectangle
+    ymin = 0,                                   # Rectangle starts at y = 0
+    ymax = ymax,                                # Rectangle ends at y = ymax
+    fill = "gray",                              # Set fill color to gray
+    alpha = 0.25                                # Set transparency
+  )  +
+  # Repeat annotation for additional periods
+  annotate("rect", xmin = as_datetime("2020-11-01 00:00:00", tz = "CET"), 
+           xmax = as_datetime("2021-01-01 00:00:00", tz = "CET"), ymin = 0, ymax = ymax, fill = "gray", alpha = 0.25)  +
+  annotate("rect", xmin = as_datetime("2021-04-01 00:00:00", tz = "CET"), 
+           xmax = as_datetime("2021-06-01 00:00:00", tz = "CET"), ymin = 0, ymax = ymax, fill = "gray", alpha = 0.25) +
+  # Add a line plot for data in DATA_ex1_2
+  geom_line(
+    data = dataDoses,
+    aes(
+      x = as_datetime(paste(Date, "00:00:00"), tz = "CET"), # Convert Date to datetime
+      y = Ndoses,                                             # Use Ndoses for y-axis
+      colour = "Number of vaccine doses"                # Set color legend
+    ),
+    linetype = 5                                            # Set line type
+  ) +
+  # Add points on the line plot
+  geom_point(
+    data = dataDoses,
+    aes(x = as_datetime(paste(Date, "00:00:00"), tz = "CET"), y = Ndoses), # Map Date and Ndoses
+    colour = "darkslateblue",              # Set color
+    shape = 16,                    # Use solid circles
+    size = 2                       # Set point size
+  ) + 
+  # Format x-axis as datetime
+  scale_x_datetime(
+    expand = c(0, 0),              # Remove padding
+    date_breaks = "month",         # Major breaks every month
+    date_minor_breaks = "month",   # Minor breaks also monthly
+    date_labels = "%m/%y"          # Format as MM/YY
+  ) +
+  # Customize color scale for doses
+  scale_colour_manual("Doses", values = "darkslateblue") +
+  # Use classic theme for the plot
+  theme_classic() + 
+  # Modify various theme elements
+  theme(
+    panel.grid.minor.y = element_line(colour = "lightgray", size = 1), # Minor grid lines
+    panel.grid.major.y = element_line(colour = "lavenderblush4", size = 1), # Major grid lines
+    axis.text.x = element_text(angle = 90),                           # Rotate x-axis labels
+    axis.text.y.right = element_text(color = "darkslateblue"),                # Color right y-axis text
+    axis.line.y.right = element_line(color = "darkslateblue"),                # Color right y-axis line
+    axis.title.y.right = element_text(color = "darkslateblue"),               # Color right y-axis title
+    legend.position = "bottom"
+  ) + 
+  # Format y-axis with a secondary axis
+  scale_y_continuous(
+    expand = c(0, 0),               # Remove padding
+    limits = c(0, ymax),        # Set y-axis limits
+    breaks = seq(0, 90, 10),        # Major breaks every 10
+    sec.axis = sec_axis(
+      trans = ~ . * coeff,          # Transform secondary axis
+      name = "Number of doses dispensed", # Secondary axis title
+      breaks = seq(0, 90, 10)*coeff, # Secondary axis breaks
+      labels = formatC(             # Format secondary axis labels
+        seq(0, 90, 10)*coeff,
+        format = "f",
+        big.mark = " ",
+        digits = 0
+      )
+    )
+  ) + 
+  # Add titles and axis labels
+  labs(title = "", x = " ", y = "Number of incidents") +
+  # Add text annotations for specific periods
+  geom_text(mapping = aes_q(
+    x = as_datetime("2020-07-01 00:00:00", tz = "CET"), y = 82, label = "Period n°1"
+  )) +
+  geom_text(mapping = aes_q(
+    x = as_datetime("2021-07-01 00:00:00", tz = "CET"), y = 82, label = "Period n°2"
+  )) +
+  geom_text(mapping = aes_q(
+    x = as_datetime("2022-08-01 00:00:00", tz = "CET"), y = 82, label = "Period n°3"
+  ))
+```
+
+
+```{r}
+# Create a data frame for histogram visualization
+dataCurve <- data.frame(
+  # "Sex" column with repeated values for "Male" and "Female"
+  Sex = c(rep("Male", 323), rep("Female", 349)),
+  # "Date" column with monthly timestamps repeated according to specified counts
+  Date = c(
+    # Male dates: repeated monthly sequence with specific counts for each month
+    rep(seq.POSIXt(
+      as_datetime("2024-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-01-01 00:00:00", tz = "CET"),
+      by = "month"
+    ), c(15, 21, 27, 26, 33, 38, 30, 22, 28, 17, 20, 19, 27)),
+    # Female dates: repeated monthly sequence with specific counts for each month
+    rep(seq.POSIXt(
+      as_datetime("2024-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-01-01 00:00:00", tz = "CET"),
+      by = "month"
+    ), c(34, 41, 56, 32, 29, 33, 37, 26, 21, 11, 9, 12, 8))
+  )
+)
+
+# Define monthly breaks for the histogram
+monthly_breaks <- seq.POSIXt(
+  from = as_datetime("2024-01-01 00:00:00", tz = "CET"),  # Start of the range
+  to = as_datetime("2025-01-01 00:00:00", tz = "CET"),    # End of the range
+  by = "month"                                            # Break intervals (monthly)
+)
+
+# Create the histogram using ggplot2
+ggplot(dataCurve) + 
+  # Add a histogram layer
+  geom_histogram(
+    mapping = aes(x = Date),  # Map the "Date" column to the x-axis
+    breaks = monthly_breaks,  # Use predefined monthly breaks for bins
+    closed = "left",          # Bins include the left boundary
+    color = "white",          # White borders around bars
+    position = "dodge",       # Position bars side by side
+    fill = "#0f766e"          # Fill color for bars
+  ) + 
+  
+  # Add horizontal lines at intervals of 5
+  geom_hline(
+    yintercept = seq(5, ymax, by = 5),  # Sequence of horizontal line positions
+    color = "white"                     # Line color
+  ) +
+  
+  # Add a horizontal line at y=0
+  geom_hline(
+    aes(yintercept = 0)
+  ) +
+  
+  # Customize x-axis labels and ticks
+  scale_x_datetime(
+    expand = c(0, 0),            # No expansion at the axis limits
+    date_breaks = "month",       # Major breaks at each month
+    date_minor_breaks = "month", # Minor breaks at each month
+    date_labels = "%m/%y"        # Format labels as "month/year"
+  ) +
+  
+  # Customize y-axis labels and ticks
+  scale_y_continuous(
+    expand = c(0, 0),            # No expansion at the axis limits
+    limits = c(0, 60),           # Set y-axis limits between 0 and 60
+    breaks = seq(0, 60, 10)      # Major breaks at intervals of 10
+  ) +
+  
+  # Add plot titles and axis labels
+  labs(
+    title = "",                  # Main title (empty)
+    caption = "",                # Caption (empty)
+    x = " ",                     # X-axis label (empty space)
+    y = "Number of cases"        # Y-axis label
+  ) +
+  
+  # Create separate panels for each sex
+  facet_grid(
+    rows = vars(Sex)             # Facet by "Sex" variable (one row for each value)
+  ) +
+  
+  # Apply a classic theme
+  theme_classic() +
+  
+  # Customize the appearance of grid lines and axis text
+  theme(
+    panel.grid.minor.y = element_line(
+      colour = "lightgray",      # Minor grid line color
+      size = 1                   # Minor grid line size
+    ),
+    panel.grid.major.y = element_line(
+      colour = "lavenderblush4", # Major grid line color
+      size = 1                   # Major grid line size
+    ),
+    axis.text.x = element_text(
+      angle = 0,                 # No rotation for x-axis text
+      vjust = 0.5,               # Vertical adjustment for x-axis text
+      hjust = -0.1               # Horizontal adjustment for x-axis text
+    )
+  )
+```
+
+
+```{r}
+# Create a data frame for the bar plot
+dataCurve <- data.frame(
+  # "Sex" column with repeated values for "Male" and "Female"
+  Sex = c(rep("Male", 323), rep("Female", 349)),
+  
+  # "Date" column with monthly timestamps repeated according to specified counts
+  Date = c(
+    # Male dates: repeated monthly sequence with specific counts for each month
+    rep(seq.POSIXt(
+      as_datetime("2024-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-01-01 00:00:00", tz = "CET"),
+      by = "month"
+    ), c(15, 21, 27, 26, 33, 38, 30, 22, 28, 17, 20, 19, 27)),
+    
+    # Female dates: repeated monthly sequence with specific counts for each month
+    rep(seq.POSIXt(
+      as_datetime("2024-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-01-01 00:00:00", tz = "CET"),
+      by = "month"
+    ), c(34, 41, 56, 32, 29, 33, 37, 26, 21, 11, 9, 12, 8))
+  )
+)
+
+# Define monthly breaks for the bar plot
+monthly_breaks <- seq.POSIXt(
+  from = as_datetime("2024-01-01 00:00:00", tz = "CET"),  # Start of the range
+  to = as_datetime("2025-01-01 00:00:00", tz = "CET"),    # End of the range
+  by = "month"                                            # Break intervals (monthly)
+)
+
+# Create the bar plot using ggplot2
+ggplot(dataCurve) + 
+  # Add a stacked bar plot layer
+  geom_bar(
+    mapping = aes(
+      x = Date,       # Map "Date" to the x-axis
+      fill = Sex      # Use "Sex" for the fill aesthetic to create stacked bars
+    ),
+    breaks = monthly_breaks,  # Define bin breaks using the monthly breaks
+    closed = "left",          # Bins include the left boundary
+    color = "white",          # White borders around bars
+    position = "stack"        # Stack the bars by "Sex"
+  ) + 
+  
+  # Add horizontal lines at regular intervals
+  geom_hline(
+    yintercept = seq(5, ymax, by = 5),  # Sequence of horizontal line positions
+    color = "white"                     # Line color
+  ) +
+  
+  # Add a horizontal line at y=0
+  geom_hline(
+    aes(yintercept = 0)
+  ) +
+  
+  # Customize x-axis labels and ticks
+  scale_x_datetime(
+    expand = c(0, 0),            # No expansion at the axis limits
+    date_breaks = "month",       # Major breaks at each month
+    date_minor_breaks = "month", # Minor breaks at each month
+    date_labels = "%m/%y"        # Format labels as "month/year"
+  ) +
+  
+  # Customize y-axis labels and ticks
+  scale_y_continuous(
+    expand = c(0, 0),            # No expansion at the axis limits
+    limits = c(0, 90),           # Set y-axis limits between 0 and 90
+    breaks = seq(0, 90, 10)      # Major breaks at intervals of 10
+  ) +
+  
+  # Add plot titles and axis labels
+  labs(
+    title = "",                  # Main title (empty)
+    caption = "",                # Caption (empty)
+    x = " ",                     # X-axis label (empty space)
+    y = "Number of cases"        # Y-axis label
+  ) +
+  
+  # Apply a classic theme
+  theme_classic() +
+  
+  # Customize the appearance of grid lines
+  theme(
+    panel.grid.minor.y = element_line(
+      colour = "lightgray",      # Minor grid line color
+      size = 1                   # Minor grid line size
+    ),
+    panel.grid.major.y = element_line(
+      colour = "lavenderblush4", # Major grid line color
+      size = 1                   # Major grid line size
+    )
+  )
+
+```
+
+
+
+## Care trajectories
+
+### Sankey 
+
+```{r}
+createSankeyData <- function(data, states, timesColumns) {
+  # Function to prepare data for a Sankey diagram
+  # Arguments:
+  #   data: A dataframe containing sequential data
+  #   states: A vector of unique states
+  #   timesColumns: A vector of column names representing time steps
+  
+  data <- as.data.frame(data)  # Ensure the input is a dataframe
+  n_states <- length(states)  # Number of unique states
+  n_times <- length(timesColumns)  # Number of time columns (steps)
+  
+  # Convert time columns into factors with specified levels (states)
+  for (i in 1:n_times) {
+    data[, timesColumns[i]] <- factor(data[, timesColumns[i]], levels = states)
+  }
+  
+  # Define colors for the nodes (states) and links between states
+  nodesCols <- c("#AAC0AF", "#B28B84", "#1C4073", "#0f766e", "#653239", "#472C1B", "#5C2751")[1:n_states]
+  linksCols <- c("#D0DCD3", "#D0B8B4", "#285CA4", "#17B5A7", "#964A54", "#76492D", "#8F3D7E")[1:n_states]
+  
+  vals <- c()  # Initialize a vector to store transition counts
+  
+  # Calculate transitions between consecutive time steps for each state
+  for (i in 2:n_times) {
+    for (j in 1:n_states) {
+      # Count occurrences of transitions from state j at time (i-1) to all states at time i
+      vals <- c(vals, table(data[, timesColumns[i]][data[, timesColumns[i - 1]] == states[j]]))
+    }
+  }
+  
+  # Prepare Sankey diagram data structure
+  dataSankeyTem <- list(
+    Nodes = data.frame(
+      X = 1:(n_states * n_times),  # Node indices (unique for each state and time step)
+      label = rep(states, n_times),  # Node labels (repeated for each time step)
+      color = rep(nodesCols, n_times)  # Node colors
+    ),
+    Links = data.frame(
+      source = c(rep(1:(n_states * (n_times - 1)), each = n_states)) - 1,  # Source nodes for transitions
+      target = as.vector(sapply(split((n_states + 1):(n_states * n_times), 
+                                      rep(1:(n_times - 1), each = n_states)),
+                                function(x) {rep(x, n_states)})) - 1,  # Target nodes for transitions
+      value = vals,  # Transition counts
+      color = rep(rep(linksCols, each = n_states), n_times - 1)  # Colors for links
+    )
+  )
+}
+
+# Example usage: Create Sankey data for three time steps with predefined states
+sankeyData <- createSankeyData(
+  data.frame(
+    T1 = sample(
+      c("Initial treatment", "Substitution", "No treatment"),
+      size = 1000, prob = c(0.95, 0.025, 0.025), replace = TRUE),
+    T2 = sample(
+      c("Initial treatment", "Substitution", "No treatment"),
+      size = 1000, prob = c(0.75, 0.125, 0.125), replace = TRUE),
+    T3 = sample(
+      c("Initial treatment", "Substitution", "No treatment"),
+      size = 1000, prob = c(0.5, 0.25, 0.25), replace = TRUE)),
+  c("Initial treatment", "Substitution", "No treatment"),  # Define states
+  c("T1", "T2", "T3")  # Define time columns
+)
+
+
+plotSankey <- function(Nodes, Links, add.prop = FALSE) {
+  # Function to create a Sankey diagram using plotly.
+  # Args:
+  #   Nodes: Data frame containing node details (labels, colors, etc.).
+  #   Links: Data frame containing link details (source, target, values, colors).
+  #   add.prop: Logical. If TRUE, adds percentage proportions to node labels.
+  
+  if (add.prop) {
+    # Check if all sources in Links have an equal number of occurrences
+    if (all(table(Links$source) == table(Links$source)[1])) {
+      nrow_per_times <- table(Links$source)[1] ^ 2 # Determine rows per iteration
+      n_times <- nrow(Links) / nrow_per_times      # Calculate number of iterations
+      
+      for (i in 1:n_times) {
+        # Extract subset of Links for current iteration
+        tab <- Links[((i - 1) * nrow_per_times + 1):((i - 1) * nrow_per_times + nrow_per_times), ]
+        
+        # Calculate proportions for targets
+        vals <- as.numeric(by(tab$value, tab$target, sum)) # Sum values by target
+        Nodes[Nodes$X %in% (unique(tab$target) + 1), "label"] <- paste0(
+          Nodes[Nodes$X %in% (unique(tab$target) + 1), "label"],
+          " (",
+          formatC(vals / sum(vals) * 100, digits = 1, format = 'f'), # Format as percentage
+          "%)"
+        )
+        
+        if (i == 1) {
+          # Calculate proportions for sources during the first iteration
+          vals <- as.numeric(by(tab$value, tab$source, sum)) # Sum values by source
+          Nodes[Nodes$X %in% (unique(tab$source) + 1), "label"] <- paste0(
+            Nodes[Nodes$X %in% (unique(tab$source) + 1), "label"],
+            " (",
+            formatC(vals / sum(vals) * 100, digits = 1, format = 'f'), # Format as percentage
+            "%)"
+          )
+        }
+      }
+    } else {
+      warning(
+        "Links arg does not have equal number of each source and function cannot automatically calculate proportions."
+      )
+    }
+  }
+  
+  # Convert colors in Links to RGBA format with transparency
+  Links$color <- apply(grDevices::col2rgb(Links$color), 2, function(x) {
+    paste0("rgba(", x[1], ",", x[2], ",", x[3], ",0.4)") # Add 40% transparency
+  })
+  
+  # Create the Sankey diagram using plotly
+  fig <- plot_ly(
+    type = "sankey",          # Specify Sankey diagram
+    orientation = "h",        # Horizontal orientation
+    alpha_stroke = 0.2,       # Node border transparency
+    node = list(
+      label = Nodes$label,    # Node labels
+      color = Nodes$color,    # Node colors
+      pad = 15,               # Padding between nodes
+      thickness = 20,         # Node thickness
+      line = list(color = "black", width = 0.5) # Node border style
+    ),
+    link = list(
+      source = Links$source,  # Source nodes for links
+      target = Links$target,  # Target nodes for links
+      value =  Links$value,   # Link values
+      color = Links$color     # Link colors (RGBA)
+    )
+  )
+  
+  # Customize the layout of the Sankey diagram
+  fig <- fig %>% layout(
+    font = list(
+      size = 14,             # Font size for labels
+      color = "black",       # Font color
+      weight = "bold"        # Font weight
+    )
+  )
+  
+  # Return the generated plot
+  fig
+}
+
+plotSankey(sankeyData$Nodes, sankeyData$Links, add.prop = TRUE)
+```
+
+### Carpet
+
+```{r}
+# Create a dataset simulating treatment sequences
+carpetData <- data.frame(
+  T1 = sample(  # Initial treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.95, 0.025, 0.025), replace = TRUE
+  ),
+  T2 = sample(  # Second treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.75, 0.125, 0.125), replace = TRUE
+  ),
+  T3 = sample(  # Third treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.65, 0.25, 0.1), replace = TRUE
+  ),
+  T4 = sample(  # Third treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.5, 0.25, 0.25), replace = TRUE
+  ),
+  T5 = sample(  # Third treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.35, 0.4, 0.25), replace = TRUE
+  )
+) %>%
+  group_by(T1, T2, T3, T4, T5) %>%  # Group data by unique sequences
+  summarise(w = n())  # Summarize the weight (frequency) of each sequence
+
+# Define a sequence object using the TraMineR package
+seqCarpet <- seqdef(
+  data = carpetData[, c("T1", "T2", "T3", "T4", "T5")],  # Extract sequence columns
+  weights = carpetData$w,  # Use weights for the sequences
+  cpal = c("#AAC0AF", "#B28B84", "#1C4073"),  # Custom color palette for states
+  cnames = c("T1", "T2", "T3", "T4", "T5")  # Custom names for the sequence stages
+)
+
+# Define substitution costs using a constant method
+couts <- seqsubm(seqCarpet, method = "CONSTANT", cval = 2)
+
+# Compute optimal matching distances
+seq.om <- seqdist(seqCarpet,
+                  method = "OM",  # Optimal Matching (OM) method
+                  indel = 1,      # Insertion/deletion cost
+                  sm = couts)     # Substitution matrix
+
+# Perform hierarchical clustering on the sequence distances
+seq.dist <- hclust(as.dist(seq.om), method = "ward.D2")
+
+# Create sequence clusters by cutting the dendrogram into 2 groups
+seq_cl <- factor(cutree(seq.dist, 3), labels = c("Class n°1", "Class n°2", "Class n°3"))
+
+# Plot individual sequence plots and group sequence plots side by side
+ggarrange(
+  ggseqiplot(seqCarpet, facet_ncol = 1, no.n = TRUE) +  # Individual plot
+    theme(
+      panel.spacing = unit(0.1, "lines"),  # Adjust panel spacing
+      axis.text.y = element_text(colour = "white"),  # Hide y-axis text
+      axis.ticks.y = element_line(colour = "white")  # Hide y-axis ticks
+    ) +
+    labs(y = ""),  # Remove y-axis label
+  ggseqiplot(  # Plot grouped sequences
+    seqCarpet,
+    group = seq_cl,  # Group by clusters
+    facet_ncol = 1,
+    no.n = TRUE
+  ) +
+    force_panelsizes(rows = table(seq_cl)) +  # Adjust panel sizes by group
+    theme(
+      panel.spacing = unit(0.1, "lines"),  # Adjust panel spacing
+      axis.text.y = element_text(colour = "white"),  # Hide y-axis text
+      axis.ticks.y = element_line(colour = "white")  # Hide y-axis ticks
+    ) +
+    labs(y = ""),  # Remove y-axis label
+  ncol = 2,  # Arrange plots in 2 columns
+  nrow = 1,  # Arrange plots in 1 row
+  common.legend = TRUE,  # Use a common legend
+  legend = "bottom"  # Place legend at the bottom
+)
+
+```
+
+
+
+
+
+# Nested Data
+
+## Treemap
+
+```{r}
+# Create a data frame containing cause of death, details (subcategory), and occurrences
+dataTreemap <- data.frame(
+  cause_of_death = c(
+    "Cancer",
+    rep("Non cancerous diseases", 6),
+    rep("Road accidents", 2),
+    rep("Other or unknown causes", 4),
+    "Suicide"
+  ),
+  details = c(
+    NA,                     # Subcategories for "Cancer" are not specified
+    "Cardiac",              # Subcategories for "Non cancerous diseases"
+    "Respiratory",
+    "Mental disorders",
+    "Digestive",
+    "Endocrinian",
+    "Other",
+    "Car",                  # Subcategories for "Road accidents"
+    "Other",
+    "Weapons",              # Subcategories for "Other or unknown causes"
+    "Poorly defined",
+    "Undefined",
+    "Other",
+    NA                      # Subcategories for "Suicide" are not specified
+  ),
+  n = c(62, 19, 2, 1, 3, 2, 8, 7, 26, 5, 14, 8, 8, 52) # Occurrences for each category/subcategory
+)
+
+# Add the total count (n) for each cause_of_death to its label
+dataTreemap <- as.data.frame(t(apply(dataTreemap, 1, function(x) {
+  x[1] <- paste0(
+    x[1], " (n=",                             # Append the total count to the cause_of_death label
+    sum(dataTreemap$n[dataTreemap$cause_of_death == x[1]]), 
+    ")"
+  )
+  x
+})))
+dataTreemap$n <- as.numeric(dataTreemap$n)    # Convert the n column back to numeric after transformation
+
+# Generate the treemap
+treemap(
+  dataTreemap,
+  index = c("cause_of_death", "details"),      # Define hierarchical levels for the treemap
+  vSize = "n",                                # Size of rectangles corresponds to the n column
+  type = "index",                             # Color rectangles based on the index
+  algorithm = "pivotSize",                    # Use pivot size layout algorithm for better space optimization
+  title = "",                                 # No title for the treemap
+  align.labels = list(c("left", "top"), c("left", "bottom")), # Align labels in blocks
+  palette = "Pastel1",                        # Use pastel colors for the treemap
+  fontsize.title = 22,                        # Title font size
+  fontcolor.labels = "black",                 # Set label font color to black
+  bg.labels = 0,                              # Transparent background for labels
+  aspRatio = 1                                # Set aspect ratio to make the blocks square
+)
+
+```
+
