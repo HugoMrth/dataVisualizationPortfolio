@@ -29,11 +29,11 @@ knitr::opts_chunk$set(
 )
 ```
 
-This is my data vizualisation portfolio.
+This is my data visualization portfolio.
 
 I gathered code I wrote to create some nice plots, put them in an Rmarkdown to create an HTML page where I would have an easy and centralized access to all of those code lines. The goal is to preview the graphs so I can identify the features I want to re-use while creating a new plot, and to be able to copy and paste the chunks I want.
 
-The .Rmd file can run by itself, all the data is either simulated or arbitrarily defined.
+The .Rmd file can run by itself, all the data used to draw the plots are either simulated, arbitrarily defined, or from a dataset.
 
 # Packages 
 
@@ -46,6 +46,7 @@ library(lubridate)
 
 # Supplementary analysis
 library(survival)
+library(survminer)
 library(TraMineR)
 library(rstatix)
 library(epiR)
@@ -654,57 +655,125 @@ This section is dedicated to regression models outputs and other associated grap
 Starting with the survival analysis, the most classic graph is the descending survival curve :
 
 ```{r}
+# Simulate survival data
 n <- 1000  # Number of individuals
-df <- data.frame(
-  id = 1:n,
-  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
-  event = factor(sample(0:1, n, prob = c(0.4, 0.6), replace = TRUE)),  # Event (0 = censored, 1 = sick, 2 = dead)
-  exposure = sample(c("Unexposed", "Exposed"), n, replace = TRUE)  # Exposure status (Unexposed or Exposed)
+dataSurvCurve <- data.frame(
+  id = 1:n,  # Unique identifier for each individual
+  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time (1 to 365 days)
+  event = factor(c(
+    sample(0:1, n/2, prob = c(0.4, 0.6), replace = TRUE),  # Events for the unexposed group
+    sample(0:1, n/2, prob = c(0.7, 0.3), replace = TRUE)   # Events for the exposed group
+  )),  # Event status as a factor: 0 = censored, 1 = event
+  exposure = rep(c("Unexposed", "Exposed"), each = n/2)  # Exposure groups
 )
-df$time[df$event == 0] <- 365  # Set time to 365 for censored observations (event == 0)
 
-fit <- survfit(Surv(time = time, event = event) ~ exposure, data = df) # Fitting a Survival Model
+# Adjust time for censored observations (event == 0)
+dataSurvCurve$time[dataSurvCurve$event == 0] <- 365
 
+# Fit the survival model with event stratified by exposure
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve)
+
+# Define the upper limit of the y-axis in percentage
 ymax <- 30
-autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +
-  geom_step(aes(linetype = strata, color = event), size = 0.8) +
-  scale_linetype_manual(name = "Group",
-                        values = c('dotted', 'solid'),
-                        labels = c('Non-exposed', 'Exposed')) +
-  scale_color_manual(name = "Event",
-                     values = c("white", "#1C4073"),
-                     labels = c(' ', "Hospitalised")) +
-  labs(x = "Période de suivi (jours)", y = "Proportion", title = "") +
-  geom_vline(aes(xintercept = 0), size = 1) +
-  geom_hline(aes(yintercept = 1-ymax/100), size = 1) +
-  scale_y_reverse(limits = 1-c(ymax/100, 1), breaks = 1-seq(ymax/100, 1, 0.1),
-                  labels = paste0(seq(ymax, 100, 10), "%"), expand = c(0,0)) +
-  scale_x_continuous(breaks = seq(0, 360, 60), expand = c(0,0)) +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.title.x = element_text(face="bold", colour="black", size = 12),
-        axis.title.y = element_text(face="bold", colour="black", size = 12),
-        legend.title = element_text(face="bold", size = 10),
-        panel.grid.major.y = element_line(colour = "lightgray", size = 0.3),
-        panel.grid.minor.x = element_blank(),
-        legend.position = c(0.15, 0.30),
-        legend.background = element_rect(fill = "transparent", color = "white"))
+
+# Plot survival curves using autoplot from the ggplot2 framework
+autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +  # Start with a blank base plot
+  geom_step(aes(linetype = strata, color = event), size = 0.8) +  # Add step lines by strata and event
+  scale_linetype_manual(
+    name = "Group",                     # Legend title for group
+    values = c('dotted', 'solid'),      # Line types for the groups
+    labels = c('Non-exposed', 'Exposed') # Labels for the groups
+  ) +
+  scale_color_manual(
+    name = "Event",                     # Legend title for events
+    values = c("white", "#1C4073"),     # Colors for censored and events
+    labels = c(' ', "Hospitalised")     # Labels for the events
+  ) +
+  labs(
+    x = "Follow up period (days)",      # X-axis label (French: Follow-up period in days)
+    y = "Proportion of population",     # Y-axis label
+    title = ""                          # Empty title
+  ) +
+  geom_vline(aes(xintercept = 0), size = 1) +  # Add vertical line at x = 0
+  geom_hline(aes(yintercept = 1 - ymax / 100), size = 1) +  # Add horizontal line for the ymax threshold
+  scale_y_reverse(
+    limits = 1 - c(ymax / 100, 1),      # Reverse y-axis to represent decreasing survival
+    breaks = 1 - seq(ymax / 100, 1, 0.1), # Break points for y-axis
+    labels = paste0(seq(ymax, 100, 10), "%"), # Labels as percentages
+    expand = c(0, 0)                    # No expansion around the limits
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 360, 60),           # X-axis breaks every 60 days
+    expand = c(0, 0)                    # No expansion around the limits
+  ) +
+  theme_minimal() +                      # Use a minimal theme
+  theme(
+    plot.title = element_text(hjust = 0.5),                        # Center align the title
+    axis.title.x = element_text(face = "bold", colour = "black", size = 12), # Style x-axis title
+    axis.title.y = element_text(face = "bold", colour = "black", size = 12), # Style y-axis title
+    legend.title = element_text(face = "bold", size = 10),         # Style legend title
+    panel.grid.major.y = element_line(colour = "lightgray", size = 0.3), # Grid for y-axis
+    panel.grid.minor.x = element_blank(),                          # Remove minor grid for x-axis
+    legend.position = c(0.15, 0.30),                               # Position legend inside plot
+    legend.background = element_rect(fill = "transparent", color = "white") # Transparent background for legend
+  )
+
 ```
 
-Let's add some even and have an ascending component :
+Second version of almost the same curve, adding some confidence interval using ggsurvplot() :
+
+```{r}
+# Simulate survival data for analysis
+n <- 1000  # Number of individuals
+dataSurvCurve <- data.frame(
+  id = 1:n,  # Unique identifier for each individual
+  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
+  event = c(
+    sample(0:1, n/2, prob = c(0.4, 0.6), replace = TRUE),  # First group: 40% censored, 60% events
+    sample(0:1, n/2, prob = c(0.7, 0.3), replace = TRUE)   # Second group: 70% censored, 30% events
+  ), 
+  # Event status: 0 = censored, 1 = event occurred
+  exposure = rep(c("Unexposed", "Exposed"), each = n/2)  # Exposure status: "Unexposed" or "Exposed"
+)
+
+# Fit survival curves stratified by exposure
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve)
+
+# Plot the survival curves using ggsurvplot
+ggsurvplot(
+  fit,                          # Survival fit object
+  data = dataSurvCurve,         # Data source
+  legend.title = "Group",       # Title for the legend
+  legend.labs = c("Exposed", "Unexposed"),  # Labels for legend groups
+  conf.int = TRUE,              # Display confidence intervals
+  censor = FALSE,               # Do not display censoring marks
+  xlab = "Follow up time (days)",  # Label for x-axis
+  ylab = "Non-hospitalisation probability", # Label for y-axis
+  break.time.by = 60,           # Breaks on the x-axis every 60 days
+  surv.scale = "percent",       # Scale survival probability as percentages
+  ylim = c(0, 1),               # Set y-axis limits (0% to 100%)
+  axes.offset = FALSE,          # Align axes at the origin
+  legend = c(0.12, 0.15)        # Position the legend within the plot
+)
+
+```
+
+Let's add one more event and have an some components (I would use ggsurvplot(), but it does not handle a survfit object having a non binary event) :
 
 ```{r}
 # Simulating survival data
 n <- 1000  # Number of individuals
-df <- data.frame(
+dataSurvCurve <- data.frame(
   id = 1:n,
   time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
-  event = factor(sample(0:2, n, prob = c(0.4, 0.5, 0.1), replace = TRUE)),  # Event (0 = censored, 1 = sick, 2 = dead)
-  exposure = sample(c("Unexposed", "Exposed"), n, replace = TRUE)  # Exposure status (Unexposed or Exposed)
+  event = factor(c(sample(0:2, n/2, prob = c(0.4, 0.4, 0.2), replace = TRUE),
+                   sample(0:2, n/2, prob = c(0.2, 0.3, 0.5), replace = TRUE))),  # Event (0 = censored, 1 = sick, 2 = dead)
+  exposure = rep(c("Unexposed", "Exposed"), each = n/2)  # Exposure status (Unexposed or Exposed)
 )
-df$time[df$event == 0] <- 365  # Set time to 365 for censored observations (event == 0)
 
-fit <- survfit(Surv(time = time, event = event) ~ exposure, data = df) # Fitting a Survival Model
+dataSurvCurve$time[dataSurvCurve$event == 0] <- 365  # Set time to 365 for censored observations (event == 0)
+
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve) # Fitting a Survival Model
 
 
 # Plot a survival curve with `autoplot` and enhance it with additional layers
@@ -771,6 +840,68 @@ autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +
     ),
     panel.grid.minor.x = element_blank()             # Remove minor grid lines on the x-axis
   )
+```
+
+Lastly, combining different curves using ggsurvplot() :
+
+```{r}
+# Create a data frame for survival analysis
+dataSurvCurve <- data.frame(
+  os.time = colon$time,          # Overall survival time from 'colon' dataset
+  os.status = colon$status,      # Overall survival event status (1 = event, 0 = censored)
+  pfs.time = sample(colon$time), # Progression-free survival time, randomized for illustration
+  pfs.status = colon$status,     # Progression-free survival event status (1 = event, 0 = censored)
+  sex = colon$sex,               # Patient sex
+  rx = colon$rx,                 # Treatment type
+  adhere = colon$adhere          # Adherence to treatment
+)
+
+# Fit survival curves for progression-free survival (PFS) by treatment type
+fit.pfs <- survfit(Surv(pfs.time, pfs.status) ~ rx, data = dataSurvCurve)
+
+# Fit survival curves for overall survival (OS) by treatment type
+fit.os <- survfit(Surv(os.time, os.status) ~ rx, data = dataSurvCurve)
+
+# Combine the survival fits into a list for plotting
+fits <- list(PFS = fit.pfs, OS = fit.os)
+
+# Plot the survival curves using ggsurvplot
+ggsurvplot(
+  fits,                          # List of survival fits (PFS and OS)
+  data = dataSurvCurve,          # Data used for plotting
+  combine = TRUE,                # Combine PFS and OS plots into one
+  censor = FALSE,                # Do not display censoring marks
+  palette = "jco",               # Use JCO color palette
+  surv.scale = "percent",        # Display survival probabilities as percentages
+  ylim = c(0, 1),                # Set y-axis limits (0% to 100% survival)
+  axes.offset = FALSE,           # Align axes at the origin
+  legend = "right",              # Position the legend on the right
+  xlab = "Survival time (years)",# Label for x-axis
+  xscale = "d_y",                # Scale x-axis from days to years
+  break.x.by = 365.25,           # Breaks on the x-axis every year
+  legend.title = "Treatment type" # Title for the legend
+)
+
+```
+
+Or display the different cruves in a grid :
+
+```{r}
+fit <- survfit( Surv(time, status) ~ sex, data = colon)
+
+ggsurvplot_facet(fit, colon, facet.by = "rx",
+                palette = "jco",                # Combine PFS and OS plots into one
+  censor = FALSE,                 # Use JCO color palette
+  surv.scale = "percent",        # Display survival probabilities as percentages
+  ylim = c(0.3, 1),                # Set y-axis limits (0% to 100% survival)
+  axes.offset = FALSE,           # Align axes at the origin
+  legend = c("PFS", "OS"),              # Position the legend on the right
+  xlab = "Survival time (years)",# Label for x-axis
+  xscale = "d_y",                # Scale x-axis from days to years
+  break.x.by = 365.25,           # Breaks on the x-axis every year
+  legend.title = "Treatment type", # Title for the legend)
+  conf.int = TRUE
+)
 ```
 
 
