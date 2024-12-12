@@ -403,89 +403,93 @@ ggplot(data = dataBarplot) +
 A very basic one. But adding a second axis with error-bars representing the incidence rate CI95% :
 
 ```{r}
+# Define maximum y-axis value and coefficient for secondary y-axis scaling
 ymax <- 200
-coeff <- 70/200
+coeff <- 70 / 200
 
-
+# Create data frame for bar plot
 dataBarplot <- data.frame(
-  year = 2012:2022,
-  n_cases = c(120, 87, 78, 96, 117, 153, 139, 164, 181, 188, 163),
-  pop = rep(300000, 11)
+  year = 2012:2022,                             # Years from 2012 to 2022
+  n_cases = c(120, 87, 78, 96, 117, 153, 139, 164, 181, 188, 163), # Number of cases per year
+  pop = rep(300000, 11)                         # Constant population size of 300,000
 ) %>%
   mutate(
+    # Calculate incidence rate (IR) per 100,000 population
     IR = n_cases / pop * 100000,
+    # Calculate confidence intervals for the incidence rate
     IR_lower = epi.conf(cbind(n_cases, pop), ctype = "inc.rate", method = "exact")[, 2] * 100000,
     IR_upper = epi.conf(cbind(n_cases, pop), ctype = "inc.rate", method = "exact")[, 3] * 100000
   )
 
-
-ggplot(dataBarplot,
-       aes(
-         x = year,
-         y = n_cases,
-         width = 0.95
-       )) +
+# Create the plot
+ggplot(dataBarplot, aes(x = year, y = n_cases, width = 0.95)) +
+  # Add bars for number of cases
   geom_col(
     mapping = aes(fill = "Incidence"),
-    fill = "#AAC0AF" # couleur des barres
+    fill = "#AAC0AF" # Bar color
   ) +
+  # Add a line for incidence rate (IR)
   geom_line(
     aes(
       x = year,
       y = IR,
-      colour = "Incidence rate" # Nmo dans la legende
+      colour = "Incidence rate" # Legend label for line
     ),
-    linetype = 1,
-    size = 1,
-    colour = "black"
-  ) + 
+    linetype = 1,               # Solid line
+    size = 1,                   # Line thickness
+    colour = "black"            # Line color
+  ) +
+  # Add error bars for confidence intervals of the incidence rate
   geom_errorbar(
     aes(
       x = year,
-      ymin = IR_lower,
-      ymax = IR_upper,
-      width = 0.2
+      ymin = IR_lower,           # Lower bound of the confidence interval
+      ymax = IR_upper,           # Upper bound of the confidence interval
+      width = 0.2                # Error bar width
     )
   ) +
+  # Add text labels for the number of cases above each bar
   geom_text(
-    aes(x = year,
-        y = n_cases,
-        label = n_cases),
-    nudge_y = 7,
-    size = 6
+    aes(x = year, y = n_cases, label = n_cases),
+    nudge_y = 7,                # Offset text above the bars
+    size = 6                    # Font size
   ) +
-  # Separation de l'axe y
+  # Customize the y-axis
   scale_y_continuous(
-    expand = c(0,0),
-    limits = c(0, ymax),
-    breaks = seq(0, ymax, 25),
-    name = "Incidence",
+    expand = c(0, 0),           # Remove padding around the axis
+    limits = c(0, ymax),        # Set y-axis limits
+    breaks = seq(0, ymax, 25),  # Major tick marks
+    name = "Incidence",         # Left y-axis label
     sec.axis = sec_axis(
-      trans = ~.*coeff,
-      name = "Incidence rate",
-      breaks = seq(0, ymax*coeff, 10)
+      trans = ~ . * coeff,      # Transformation for secondary axis
+      name = "Incidence rate",  # Right y-axis label
+      breaks = seq(0, ymax * coeff, 10) # Tick marks for secondary axis
     )
-  ) + 
-  scale_x_continuous(
-    breaks = 2012:2022,
-    labels = 2012:2022,
-    name = ""
   ) +
-  theme_classic() + 
+  # Customize the x-axis
+  scale_x_continuous(
+    breaks = 2012:2022,         # Tick marks for each year
+    labels = 2012:2022,         # Labels for each year
+    name = ""                   # Empty label for the x-axis
+  ) +
+  # Apply a classic theme
+  theme_classic() +
+  # Customize grid lines, axis text, and axis colors
   theme(
-    panel.grid.major.y = element_line(colour = "grey"),
-    panel.grid.minor.y = element_line(colour = "lightgray"),
-    axis.text.x = element_text(size = 11),
-    axis.line.y.left = element_line(color = "#AAC0AF"),
-    axis.title.y.left = element_text(color = "#AAC0AF"),
-    axis.text.y.left = element_text(color = "#AAC0AF")
-  ) + # Titres
+    panel.grid.major.y = element_line(colour = "grey"),    # Major grid lines
+    panel.grid.minor.y = element_line(colour = "lightgray"), # Minor grid lines
+    axis.text.x = element_text(size = 11),                # Font size for x-axis labels
+    axis.line.y.left = element_line(color = "#AAC0AF"),   # Color for left y-axis line
+    axis.title.y.left = element_text(color = "#AAC0AF"),  # Color for left y-axis title
+    axis.text.y.left = element_text(color = "#AAC0AF")    # Color for left y-axis labels
+  ) +
+  # Add titles and remove legend title
   labs(
-    title = "",
-    fill = "",
-    x = " ",
-    y = " "
-  ) 
+    title = "",                     # Plot title
+    fill = "",                      # Legend title (empty)
+    x = " ",                        # x-axis title (empty)
+    y = " "                         # y-axis title (empty)
+  )
 ```
 
 ## Boxplot
@@ -555,6 +559,25 @@ ggplot(dataBoxplot) +
   theme_minimal()
 
 ```
+
+Jitter boxplots fixes one of the classic boxplots downside by adding the points to give a better idea of the data distribution :
+
+```{r}
+dataBoxplot <- data.frame(
+  y = rnorm(200), 
+  Group = sample(LETTERS[1:3], size = 200, replace = TRUE)
+)
+
+# Box plot by group with jitter
+ggplot(dataBoxplot, aes(x = Group, y = y, colour = Group)) + 
+  geom_boxplot(outlier.shape = NA) + # Box plot without showing outliers
+  geom_jitter(width = 0.2) +         # Add jittered points for individual observations
+  theme_minimal() +                  # Use a minimal theme for clean visualization
+  xlab("Group") +                    # X-axis label
+  ylab("Some randomly generated values") # Y-axis label
+```
+
+
 
 Adding some two-by-two testing :
 
@@ -751,6 +774,81 @@ autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +
 ```
 
 
+## Forest plots
+
+Forest plots are the go to graph for any type of regression that present results as exponential of it's coefficients. I really like the existing packages displaying the OR and CI95% so I tried to reproduce it.
+
+```{r}
+# Create the data frame for the forest plot
+dataForest <- data.frame(
+  var = c("Age", "Age", "Age", "Age", "Sex", "Sex", "Diabetes", "Diabetes", "Smoker", "Smoker"), # Variables
+  mod = c("18-24", "25-44", "45-64", "64+", "Male", "Female", "No", "Yes", "No", "Yes"), # Categories or modalities within variables
+  estimate = c(NA, 1.05, 1.38, 1.72, NA, 0.87, NA, 2.48, NA, 0.97), # Point estimates (Odds Ratios)
+  conf.low = c(NA, 0.92, 1.21, 1.44, NA, 0.72, NA, 2.13, NA, 0.88), # Lower bounds of confidence intervals
+  conf.high = c(NA, 1.22, 1.63, 1.87, NA, 1.01, NA, 2.67, NA, 1.05) # Upper bounds of confidence intervals
+) %>% 
+  mutate(
+    id = 1:10, # Assign a unique ID to each row
+    label = ifelse(is.na(estimate), "Ref", 
+                   paste0(formatC(estimate, 2, format = "f"), " [",
+                          formatC(conf.low, 2, format = "f"), "-", 
+                          formatC(conf.high, 2, format = "f"), "]")), 
+    # Create labels for display: "estimate [conf.low-conf.high]" or "Ref" if missing
+    estimate = ifelse(is.na(estimate), 1, estimate), # Replace missing estimates with 1 (reference)
+    conf.low = ifelse(is.na(conf.low), 1, conf.low), # Replace missing lower bounds with 1 (reference)
+    conf.high = ifelse(is.na(conf.high), 1, conf.high), # Replace missing upper bounds with 1 (reference)
+    signif = ifelse(conf.low <= 1 & conf.high >= 1, "p>0.05", "p<0.05") 
+    # Determine significance: overlaps 1 (p>0.05) or not (p<0.05)
+  )
+
+# Create the forest plot using ggplot2
+ggplot(dataForest) + 
+  geom_vline(
+    xintercept = 1, # Reference line at Odds Ratio = 1
+    color = "gray25", 
+    linetype = 2 # Dashed line
+  ) + 
+  geom_vline(
+    xintercept = c(0.25, 0.5, 2, 4), # Additional vertical lines for log-scale guidance
+    color = "gray75",
+    linetype = "dotted"
+  ) +
+  geom_errorbar(
+    aes(
+      y = reorder(mod, -id), # Reorder y-axis labels based on ID
+      xmin = conf.low, # Lower bound of the confidence interval
+      xmax = conf.high # Upper bound of the confidence interval
+    ),
+    position = position_dodge(0.5), # Adjust error bar position
+    width = 0.4, # Width of the error bars
+    size = 0.8 # Thickness of the error bars
+  ) + 
+  geom_point(
+    aes(x = estimate, y = reorder(mod, -id), color = signif), # Add points for the estimates
+    position = position_dodge(width = 0.5), # Adjust point position
+    size = 2.5 # Size of the points
+  ) + 
+  scale_x_log10( # Use a logarithmic scale for x-axis
+    breaks = c(0.5, 1, 2, 4), # Specify tick marks
+    limits = c(0.49, 6) # Set x-axis limits
+  ) +
+  scale_color_manual(
+    name = "Significance", # Legend title for significance
+    values = c("red", "black") # Colors for significant and non-significant points
+  ) +
+  facet_grid(
+    rows = vars(var), # Create separate panels for each variable
+    scales = "free", # Allow scales to adjust freely per panel
+    switch = "both" # Switch facet labels to both sides
+  ) +
+  xlab("Odds ratio") + # Label for the x-axis
+  ylab("") + # Remove y-axis label
+  theme_classic() + # Use a clean, minimal theme
+  theme(panel.grid.major.y = element_line(colour = "lightgray")) + # Add gridlines for readability
+  geom_text(
+    aes(x = 5, y = reorder(mod, -id), label = dataForest$label), # Add text labels for estimates
+  )
+```
 
 
 # Epidemiology related plots
