@@ -25,11 +25,19 @@ output:
 knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
-  out.width = '100%'
+  out.width = '800px'
 )
 ```
 
+This is my data vizualisation portfolio.
+
+I gathered code I wrote to create some nice plots, put them in an Rmarkdown to create an HTML page where I would have an easy and centralized access to all of those code lines. The goal is to preview the graphs so I can identify the features I want to re-use while creating a new plot, and to be able to copy and paste the chunks I want.
+
+The .Rmd file can run by itself, all the data is either simulated or arbitrarily defined.
+
 # Packages 
+
+Below is the list of all the required packages. Mostly graphical tools, along with some statistical analysis ressources.
 
 ```{r}
 # Tidy data
@@ -63,10 +71,16 @@ library(treemap)
 
 # Basic plots 
 
+Starting with the basics : histograms, barplots, pie charts...
+
+Basic is good, but make it pretty.
+
 ## Barplots
 
 
 ### Frequencies
+
+An horizontal and stacked barplot :
 
 ```{r}
 # Simulate data for a barplot
@@ -133,6 +147,8 @@ ggplot(dataBarplot) +
   )
 ```
 
+This one is vertical and dodged :
+
 ```{r}
 # Simulate data for a barplot
 dataBarplot <- data.frame(
@@ -173,7 +189,8 @@ ggplot(dataBarplot) +
   geom_text(
     mapping = aes(x = Symptoms, y = N, label = N), # Position and content of the text
     nudge_x = rep(c(-0.3, 0, 0.3), each = 14),
-    nudge_y = 120
+    nudge_y = 120, 
+    size = 2
   ) +
   # Add titles and subtitles (empty here for now)
   labs(title = "", subtitle = "") + 
@@ -194,6 +211,10 @@ ggplot(dataBarplot) +
 ```
 
 ### Proportions
+
+I like to display percentages as stacked barplots, to make it obvious that values sum up to a hundred.
+
+This one has and grid according to the status, and I feel like it is easier to read the proportions differences whenever the bars are horizontal :
 
 ```{r}
 # Simulate data for a bar plot
@@ -280,8 +301,9 @@ ggplot(dataBarplot) +
   )
 ```
 
-```{r}
+Adding some percentages labels and handling long variables names :
 
+```{r}
 # Create the data frame for the bar plot
 dataBarplot <- data.frame(
   # "LTI" column with long-term illness categories repeated for each age group
@@ -335,7 +357,7 @@ ggplot(data = dataBarplot) +
   # Add percentage labels to each segment of the bar
   geom_text(
     aes(x = LTI, y = x_text, label = lab),
-    size = 3,              # Font size
+    size = 2,              # Font size
     colour = "white"       # Text color
   ) +
   
@@ -378,6 +400,8 @@ ggplot(data = dataBarplot) +
 
 ### Incidence rates
 
+A very basic one. But adding a second axis with error-bars representing the incidence rate CI95% :
+
 ```{r}
 ymax <- 200
 coeff <- 70/200
@@ -402,7 +426,7 @@ ggplot(dataBarplot,
          width = 0.95
        )) +
   geom_col(
-    mapping = aes( fill = "Incidence"),
+    mapping = aes(fill = "Incidence"),
     fill = "#AAC0AF" # couleur des barres
   ) +
   geom_line(
@@ -422,7 +446,15 @@ ggplot(dataBarplot,
       ymax = IR_upper,
       width = 0.2
     )
-  ) +# Separation de l'axe y
+  ) +
+  geom_text(
+    aes(x = year,
+        y = n_cases,
+        label = n_cases),
+    nudge_y = 7,
+    size = 6
+  ) +
+  # Separation de l'axe y
   scale_y_continuous(
     expand = c(0,0),
     limits = c(0, ymax),
@@ -458,7 +490,11 @@ ggplot(dataBarplot,
 
 ## Boxplot
 
+I don't really enjoy boxplots as I feel they get quite boring. But you can add some twists to make it interesting !
+
 ### Classic
+
+Basic setup :
 
 ```{r}
 # Create a data frame for boxplot visualization
@@ -493,6 +529,11 @@ ggplot(dataBoxplot) +
     color = "red",            # Set point color to red
     shape = 16                # Use solid circle for points
   ) +
+  annotate(
+    "text",
+    x = 1:max(dataBoxplot$op_id), y = 10,
+    label = paste0("(n=", table(dataBoxplot$op_id),")")
+  ) +
   # Add a subtitle with the p-value from a linear model (setup ~ op_id)
   labs(subtitle = paste0("p=", round(summary(lm(setup ~ op_id, dataBoxplot))$coefficient[2, 4], 4))) +
   # Label the y-axis
@@ -501,7 +542,7 @@ ggplot(dataBoxplot) +
   xlab("Number of surgeries") +
   # Customize the y-axis scale
   scale_y_continuous(
-    limits = c(0, 10),         # Set y-axis limits between 0 and 10
+    limits = c(0, 10.5),         # Set y-axis limits between 0 and 10
     breaks = 0:10,             # Add breaks at each integer value
     expand = c(0, 0)           # Remove padding on the axis
   ) +
@@ -515,7 +556,7 @@ ggplot(dataBoxplot) +
 
 ```
 
-
+Adding some two-by-two testing :
 
 ```{r}
 # Simulate data for a boxplot
@@ -560,7 +601,7 @@ ggboxplot(
   xlab = ""      # No label for the x-axis
 ) +
   scale_y_continuous(
-    limits = c(0, max(dataBoxplot$val)),
+    limits = c(0, 25),
     expand = c(0, 0)
   ) +
   stat_pvalue_manual(pwc) +  # Add p-values from pairwise t-tests
@@ -573,6 +614,8 @@ ggboxplot(
 
 ### Violins
 
+Switching to violins plots to add some info and some nice colors :
+
 ```{r}
 ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
   ylab("Workers raw wage") +
@@ -581,7 +624,11 @@ ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
 
 # Models outputs
 
+This section is dedicated to regression models outputs and other associated graph.
+
 ## Survival curve
+
+Starting with the survival analysis, the most classic graph is the descending survival curve :
 
 ```{r}
 n <- 1000  # Number of individuals
@@ -621,8 +668,7 @@ autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +
         legend.background = element_rect(fill = "transparent", color = "white"))
 ```
 
-
-
+Let's add some even and have an ascending component :
 
 ```{r}
 # Simulating survival data
@@ -709,7 +755,13 @@ autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +
 
 # Epidemiology related plots
 
+This section is dedicated to graphs that are often used in epidemiology. Those graph can of course be used in other fields (data don't care about your feelings), but I am obviously speaking in the context of my own job. I am indeed biased.
+
 ## Epidemic curve
+
+Epidemic curves are just like bar plots, but the time component displayed on the X axis make it so that we tend to represent it more like and histogram.
+
+Here, I am displaying the two data series as dodged curves, and adding a second axis to displayed the line :
 
 ```{r}
 dataCurve <- data.frame(
@@ -840,6 +892,7 @@ ggplot(dataCurve) +
   ))
 ```
 
+It is easier to compare the shape of several curves when they are displayed separately :
 
 ```{r}
 # Create a data frame for histogram visualization
@@ -881,18 +934,15 @@ ggplot(dataCurve) +
     position = "dodge",       # Position bars side by side
     fill = "#0f766e"          # Fill color for bars
   ) + 
-  
   # Add horizontal lines at intervals of 5
   geom_hline(
     yintercept = seq(5, ymax, by = 5),  # Sequence of horizontal line positions
     color = "white"                     # Line color
   ) +
-  
   # Add a horizontal line at y=0
   geom_hline(
     aes(yintercept = 0)
   ) +
-  
   # Customize x-axis labels and ticks
   scale_x_datetime(
     expand = c(0, 0),            # No expansion at the axis limits
@@ -900,14 +950,12 @@ ggplot(dataCurve) +
     date_minor_breaks = "month", # Minor breaks at each month
     date_labels = "%m/%y"        # Format labels as "month/year"
   ) +
-  
   # Customize y-axis labels and ticks
   scale_y_continuous(
     expand = c(0, 0),            # No expansion at the axis limits
     limits = c(0, 60),           # Set y-axis limits between 0 and 60
     breaks = seq(0, 60, 10)      # Major breaks at intervals of 10
   ) +
-  
   # Add plot titles and axis labels
   labs(
     title = "",                  # Main title (empty)
@@ -915,15 +963,12 @@ ggplot(dataCurve) +
     x = " ",                     # X-axis label (empty space)
     y = "Number of cases"        # Y-axis label
   ) +
-  
   # Create separate panels for each sex
   facet_grid(
     rows = vars(Sex)             # Facet by "Sex" variable (one row for each value)
   ) +
-  
   # Apply a classic theme
   theme_classic() +
-  
   # Customize the appearance of grid lines and axis text
   theme(
     panel.grid.minor.y = element_line(
@@ -933,15 +978,11 @@ ggplot(dataCurve) +
     panel.grid.major.y = element_line(
       colour = "lavenderblush4", # Major grid line color
       size = 1                   # Major grid line size
-    ),
-    axis.text.x = element_text(
-      angle = 0,                 # No rotation for x-axis text
-      vjust = 0.5,               # Vertical adjustment for x-axis text
-      hjust = -0.1               # Horizontal adjustment for x-axis text
     )
   )
 ```
 
+Sometimes, you want to now the total number of case, but still display the factor variable :
 
 ```{r}
 # Create a data frame for the bar plot
@@ -987,18 +1028,15 @@ ggplot(dataCurve) +
     color = "white",          # White borders around bars
     position = "stack"        # Stack the bars by "Sex"
   ) + 
-  
   # Add horizontal lines at regular intervals
   geom_hline(
     yintercept = seq(5, ymax, by = 5),  # Sequence of horizontal line positions
     color = "white"                     # Line color
   ) +
-  
   # Add a horizontal line at y=0
   geom_hline(
     aes(yintercept = 0)
   ) +
-  
   # Customize x-axis labels and ticks
   scale_x_datetime(
     expand = c(0, 0),            # No expansion at the axis limits
@@ -1006,14 +1044,12 @@ ggplot(dataCurve) +
     date_minor_breaks = "month", # Minor breaks at each month
     date_labels = "%m/%y"        # Format labels as "month/year"
   ) +
-  
   # Customize y-axis labels and ticks
   scale_y_continuous(
     expand = c(0, 0),            # No expansion at the axis limits
     limits = c(0, 90),           # Set y-axis limits between 0 and 90
     breaks = seq(0, 90, 10)      # Major breaks at intervals of 10
   ) +
-  
   # Add plot titles and axis labels
   labs(
     title = "",                  # Main title (empty)
@@ -1021,10 +1057,8 @@ ggplot(dataCurve) +
     x = " ",                     # X-axis label (empty space)
     y = "Number of cases"        # Y-axis label
   ) +
-  
   # Apply a classic theme
   theme_classic() +
-  
   # Customize the appearance of grid lines
   theme(
     panel.grid.minor.y = element_line(
@@ -1036,14 +1070,17 @@ ggplot(dataCurve) +
       size = 1                   # Major grid line size
     )
   )
-
 ```
 
 
 
 ## Care trajectories
 
+Care trajectories are a huge deal in epidemiology. Succession of treatment states can be tricky to display, and is it definitly an pain to handle the data to mke it work.
+
 ### Sankey 
+
+Sankey diagrams are cool. I like them. Look at it :
 
 ```{r}
 createSankeyData <- function(data, states, timesColumns) {
@@ -1198,6 +1235,8 @@ plotSankey(sankeyData$Nodes, sankeyData$Links, add.prop = TRUE)
 
 ### Carpet
 
+Carpet diagrams allow to display some individual trajectories. I really enjoy the facts that you can display the whole population and/or the clusters identified via a clustering method.
+
 ```{r}
 # Create a dataset simulating treatment sequences
 carpetData <- data.frame(
@@ -1279,12 +1318,13 @@ ggarrange(
 ```
 
 
+## Nested Data
 
+Nested data are as tricky as care trajectories. You have to handle the data properly and be careful in the level of detail that you want to display.
 
+### Treemap
 
-# Nested Data
-
-## Treemap
+Treemaps get the job done. They're not quite as aesthetic as some other (curvy) options, but I feel like the fact they are squared makes it easier to read the data and "see" which area is bigger.
 
 ```{r}
 # Create a data frame containing cause of death, details (subcategory), and occurrences
