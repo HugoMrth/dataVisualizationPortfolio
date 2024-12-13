@@ -4,7 +4,7 @@ author: "Hugo Marthinet"
 date: "`r Sys.Date()`"
 output: 
   html_document:
-    css: custom.css
+    css: style.css
     code_folding: hide
     toc: TRUE
     toc_float: TRUE
