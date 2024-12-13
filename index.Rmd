@@ -1,9 +1,10 @@
 ---
 title: "Data Vizualisation Portfolio"
 author: "Hugo Marthinet"
-date: "10/12/2024"
+date: "`r Sys.Date()`"
 output: 
   html_document:
+    css: custom.css
     code_folding: hide
     toc: TRUE
     toc_float: TRUE
@@ -13,13 +14,24 @@ output:
     theme: lumen
 ---
 
-<style type = "text/css">
-.main-container {
-  max-width: 1800px !important;
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Ajouter des boutons aux blocs de code
+  document.querySelectorAll("pre code").forEach(function(block) {
+    const btn = document.createElement("button");
+    btn.innerText = "Copy";
+    btn.className = "copy-btn";
+    btn.addEventListener("click", function() {
+      navigator.clipboard.writeText(block.innerText).then(() => {
+        btn.innerText = "Copied !";
+        setTimeout(() => btn.innerText = "Copy", 2000);
+      });
+    });
+    block.parentNode.style.position = "relative";
+    block.parentNode.appendChild(btn);
+  });
+});
+</script>
 
 ```{r options, include = FALSE}
 knitr::opts_chunk$set(
@@ -492,6 +504,102 @@ ggplot(dataBarplot, aes(x = year, y = n_cases, width = 0.95)) +
     y = " "                         # y-axis title (empty)
   )
 ```
+
+
+## Line charts
+
+Let's start with a pretty basic double axis line chart :
+
+```{r}
+# Create a dataset for line chart visualization
+dataLinechart <- data.frame(
+  year = seq.Date(as.Date("2015-01-01"), as.Date("2023-01-01"), by = "year"),  # Sequence of years from 2015 to 2023
+  n_tlc = c(545268, 668497, 551234, 619147, 582365, 854256, 968214, 1023578, 945127),  # Number of teleconsultations per year
+  prop_disp = c(0.23, 0.25, 0.24, 0.28, 0.25, 0.35, 0.38, 0.41, 0.37)  # Proportion of teleconsultations with dispensing
+) %>%
+  mutate(
+    n_tlc_disp = n_tlc * prop_disp  # Calculate teleconsultations with dispensing
+  )
+
+# Define the maximum value for y-axis scaling
+ymax <- 1250000
+
+# Create the plot using ggplot2
+ggplot(dataLinechart, aes(x = year)) +
+  # Add line and points for teleconsultations with dispensing
+  geom_line(aes(y = n_tlc_disp, color = "Teleconsultations with dispensing", lty = "Teleconsultations with dispensing")) +
+  geom_point(aes(x = year, y = n_tlc_disp, color = "Teleconsultations with dispensing"), size = 1.0) +
+  
+  # Add line and points for total teleconsultations
+  geom_line(aes(y = n_tlc, color = "Teleconsultations", lty = "Teleconsultations")) +
+  geom_point(aes(x = year, y = n_tlc, color = "Teleconsultations"), size = 1.0) +
+  
+  # Add line and points for the ratio (scaled proportion)
+  geom_line(aes(y = (prop_disp * ymax), color = "Ratio", lty = "Ratio")) +
+  geom_point(aes(x = year, y = (prop_disp * ymax), color = "Ratio"), size = 1.0) +
+  
+  # Set labels for the legend
+  labs(color = "", lty = "") +
+  
+  # Customize the colors for each line
+  scale_colour_manual(values = c(
+    "Teleconsultations with dispensing" = "#be123c",
+    "Teleconsultations" = "#1e3a8a",
+    "Ratio" = "#64748b"
+  )) +
+  
+  # Customize the line types for each line
+  scale_linetype_manual(values = c(
+    "Teleconsultations with dispensing" = 1,
+    "Teleconsultations" = 1,
+    "Ratio" = 2
+  )) +
+  
+  # Adjust the legend to remove unnecessary symbols
+  guides(linetype = guide_legend(override.aes = list(shape = NA))) +
+  
+  # Set up the y-axis with dual scales (primary and secondary)
+  scale_y_continuous(
+    breaks = seq(0, ymax, 250000),  # Primary axis breaks
+    labels = formatC(seq(0, ymax, 250000), digits = 0, format = "f", big.mark = " "),  # Format for primary axis
+    sec.axis = sec_axis(
+      ~ . / ymax,  # Scale the secondary axis relative to ymax
+      name = "Ratio of the number of teleconsultations \nwith dispensing to the total number of dispensations",
+      labels = c("0%", "25%", "50%", "75%", "100%")  # Labels for the secondary axis
+    ),
+    expand = c(0, 0)
+  ) +
+  
+  # Set the range for the y-axis
+  coord_cartesian(ylim = c(0, ymax)) +
+  
+  # Customize the x-axis with year labels
+  scale_x_date(
+    breaks = seq.Date(as.Date("2015-01-01"), as.Date("2023-01-01"), by = "year"),
+    labels = format.Date(seq.Date(as.Date("2015-01-01"), as.Date("2023-01-01"), by = "year"), "%Y")
+  ) +
+  
+  # Add labels for axes
+  labs(
+    x = "",
+    y = "Number of teleconsultations"
+  ) +
+  
+  # Apply a minimal theme and customize the plot appearance
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(colour = "black", size = 0.3),
+    axis.ticks.x = element_line(colour = "black", size = 0.3),
+    axis.line.y = element_line(colour = "black", size = 0.3),
+    axis.ticks.y = element_line(colour = "black", size = 0.3),
+    legend.position = c(0.25, 0.85),  # Position the legend
+    legend.background = element_rect(fill = "transparent", color = "white")  # Add transparent background for legend
+  )
+
+```
+
 
 ## Boxplot
 
@@ -979,6 +1087,74 @@ ggplot(dataForest) +
   geom_text(
     aes(x = 5, y = reorder(mod, -id), label = dataForest$label), # Add text labels for estimates
   )
+```
+
+Here is a simpler version, with no OR table and a lighter display :
+
+```{r}
+# Create the data frame for the forest plot
+dataForest <- data.frame(
+  var = c("Age", "Age", "Age", "Age", "Sex", "Sex", "Diabetes", "Diabetes", "Smoker", "Smoker"), # Variables
+  mod = c("18-24", "25-44", "45-64", "64+", "Male", "Female", "No", "Yes", "No", "Yes"), # Categories or modalities within variables
+  estimate = c(NA, 1.05, 1.38, 1.72, NA, 0.87, NA, 2.48, NA, 0.97), # Point estimates (Odds Ratios)
+  conf.low = c(NA, 0.92, 1.21, 1.44, NA, 0.72, NA, 2.13, NA, 0.88), # Lower bounds of confidence intervals
+  conf.high = c(NA, 1.22, 1.63, 1.87, NA, 1.01, NA, 2.67, NA, 1.05) # Upper bounds of confidence intervals
+) %>% 
+  dplyr::filter(!is.na(estimate)) %>%
+  mutate( 
+    id = 1:6, # Assign a unique ID to each row
+    mod = paste0(var, " = ", mod),# Create labels for display
+    estimate = ifelse(is.na(estimate), 1, estimate), # Replace missing estimates with 1 (reference)
+    conf.low = ifelse(is.na(conf.low), 1, conf.low), # Replace missing lower bounds with 1 (reference)
+    conf.high = ifelse(is.na(conf.high), 1, conf.high), # Replace missing upper bounds with 1 (reference)
+    signif = ifelse(conf.low <= 1 & conf.high >= 1, "p>0.05", "p<0.05") 
+    # Determine significance: overlaps 1 (p>0.05) or not (p<0.05)
+  )
+
+
+
+# Create the forest plot using ggplot2
+ggplot(dataForest) + 
+  geom_vline(
+    xintercept = 1, # Reference line at Odds Ratio = 1
+    color = "gray25", 
+    linetype = 2 # Dashed line
+  ) + 
+  geom_vline(
+    xintercept = c(0.25, 0.5, 2, 4), # Additional vertical lines for log-scale guidance
+    color = "gray75",
+    linetype = "dashed"
+  ) +
+  geom_errorbar(
+    aes(
+      y = reorder(mod, -id), # Reorder y-axis labels based on ID
+      xmin = conf.low, # Lower bound of the confidence interval
+      xmax = conf.high # Upper bound of the confidence interval
+    ),
+    position = position_dodge(0.5), # Adjust error bar position
+    width = 0.2, # Width of the error bars
+    size = 0.8 # Thickness of the error bars
+  ) + 
+  geom_point(
+    aes(x = estimate, y = reorder(mod, -id), shape = signif, size = signif), # Add points for the estimates
+    position = position_dodge(width = 0.5), # Adjust point position
+  ) + 
+  scale_x_log10( # Use a logarithmic scale for x-axis
+    breaks = c(0.5, 1, 2, 4), # Specify tick marks
+    limits = c(0.49, 6) # Set x-axis limits
+  ) +
+  scale_shape_manual(
+    name = "Significance", # Legend title for significance
+    values = c(15, 18) # Colors for significant and non-significant points
+  ) +
+  scale_size_manual(
+    name = "Significance", # Legend title for significance
+    values = c(4, 2) # Colors for significant and non-significant points
+  ) +
+  xlab("Odds ratio") + # Label for the x-axis
+  ylab("") + # Remove y-axis label
+  theme_classic() + # Use a clean, minimal theme
+  theme(panel.grid.major.y = element_line(colour = "lightgray", linetype = "dotted")) # Add gridlines for readability
 ```
 
 

@@ -1,0 +1,85 @@
+<style type = "text/css">
+
+/* text style */
+.main-container {
+  max-width: 1200px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+body {
+  font-family: Bahnschrift;
+  font-size: 16pt;
+}
+h1 {
+  font-family: Bahnschrift;
+  font-size: 28pt;
+  color: #944F4C;
+  font-weight: bold;
+}
+h2 {
+  font-family: Bahnschrift;
+  font-size: 24pt;
+  color: #944F4C;
+  font-weight: bold;
+}
+h3 {
+  font-family: Bahnschrift;
+  font-size: 20pt;
+  color: #944F4C;
+  font-weight: bold;
+}
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    z-index: 2;
+    color: #fff;
+    background-color: #944F4C;
+    border-color: #944F4C;
+}
+#TOC {
+  color: #944F4C; 
+}
+
+
+
+
+/* copy-paste button style */
+.copy-btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background-color: #944F4C;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: Bahnschrift;
+  font-size: 12px;
+  border-radius: 5px;
+}
+.copy-btn:hover {
+  background-color: white;
+  color: #944F4C;
+}
+pre {
+  position: relative;
+}
+
+
+
+/* code folding button style */
+.code-folding-btn {
+  font-size: 14px;
+  background-color: #944F4C;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.code-folding-btn:after {
+  content: ' ▼'; 
+}
+pre.collapsed + .code-folding-btn:after {
+  content: ' ►'; 
+}
+
+</style>
