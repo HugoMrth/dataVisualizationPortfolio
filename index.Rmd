@@ -47,9 +47,7 @@ I gathered code I wrote to create some nice plots, put them in an Rmarkdown to c
 
 The .Rmd file can run by itself, all the data used to draw the plots are either simulated, arbitrarily defined, or from a dataset.
 
-# Packages 
-
-Below is the list of all the required packages. Mostly graphical tools, along with some statistical analysis ressources.
+Below is the list of all the required packages. Mostly graphical tools, along with some statistical analysis resources.
 
 ```{r}
 # Tidy data
@@ -82,7 +80,7 @@ library(ggstatsplot)
 library(treemap)
 ```
 
-# Basic plots 
+# Basics
 
 Starting with the basics : histograms, barplots, pie charts...
 
@@ -376,10 +374,11 @@ ggplot(data = dataBarplot) +
   
   # Add titles and axis labels
   labs(
-    title = "Long term illnesses per age group" # Title
+    title = "Long term illnesses per age group", # Title
+    ylab = "Proportion",                        # Y-axis label
+    xlab = ""                                   # X-axis label (empty)
   ) +
-  ylab("Proportion") +                        # Y-axis label
-  xlab("") +                                  # X-axis label (empty)
+  
   # Customize the y-axis scale
   scale_y_continuous(
     breaks = seq(0, 100, 25),                   # Tick intervals
@@ -389,7 +388,7 @@ ggplot(data = dataBarplot) +
   # Customize the fill colors for the "Age" categories
   scale_fill_manual(
     values = c('#1E5471', '#28AFB0', '#F6803C', '#82354F', '#E0D6FF'),
-    name = "Age group"                       # Legend title
+    name = "Classe ATC1"                       # Legend title
   ) +
   
   # Apply a minimal theme to the plot
@@ -753,7 +752,78 @@ ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
   xlab("Education level")
 ```
 
-# Models outputs
+
+## Scatter plots
+
+Scatter plots are not often used in my field of work, but they can come in handy in niche situations. I especially like the 3D scatterplot !
+
+### 3D
+
+```{r}
+# Prepare the data
+dataScatter <- iris %>%
+  mutate(
+    # Assign colors to each species using hex color codes
+    p_col = ifelse(Species == "setosa", "#EB5E55", 
+                   ifelse(Species == "versicolor", "#C6D8D3", "#9984D4"))
+  )
+
+# Initialize the 3D scatter plot
+p <- plot_ly() %>%
+  add_trace(
+    data = dataScatter, # Use the prepared dataset
+    type = "scatter3d", # Create a 3D scatter plot
+    mode = "markers", # Display only markers (points)
+    x = ~Sepal.Length, # Map Sepal Length to the x-axis
+    y = ~Sepal.Width,  # Map Sepal Width to the y-axis
+    z = ~Petal.Length, # Map Petal Length to the z-axis
+    color = ~Species,  # Use Species as a grouping variable for the legend
+    marker = list(size = 5, color = ~p_col) # Set marker size and color based on p_col
+  ) %>%
+  layout(
+    # Configure 3D axis titles
+    scene = list(
+      xaxis = list(title = 'Sepal length'),
+      yaxis = list(title = 'Sepal width'),
+      zaxis = list(title = 'Petal length')
+    ),
+    # Add annotations (e.g., legend title) to the plot
+    annotations = list(
+      x = 1.13,  # x-coordinate for the annotation
+      y = 1.05,  # y-coordinate for the annotation
+      text = 'Species', # Annotation text
+      showarrow = FALSE # Hide any arrow for the annotation
+    )
+  )
+
+# Add lines anchoring points to the XY plane
+for (i in 1:nrow(dataScatter)) {
+  p <- p %>%
+    add_trace(
+      type = "scatter3d", # Add 3D scatter traces for lines
+      mode = "lines", # Render as lines
+      x = c(dataScatter[i, 1], dataScatter[i, 1]), # x-coordinates for the line (constant)
+      y = c(dataScatter[i, 2], dataScatter[i, 2]), # y-coordinates for the line (constant)
+      z = c(dataScatter[i, 3], min(dataScatter[, 3])), # z-coordinates: from point to minimum z-value
+      line = list(
+        # Dynamically generate RGBA color from p_col for line transparency
+        color = sprintf("rgba(%d, %d, %d, %.2f)", 
+          grDevices::col2rgb(dataScatter$p_col[i])[1], # Red component
+          grDevices::col2rgb(dataScatter$p_col[i])[2], # Green component
+          grDevices::col2rgb(dataScatter$p_col[i])[3], # Blue component
+          0.8) # Transparency (alpha)
+      ),
+      showlegend = FALSE # Exclude lines from the legend
+    )
+}
+
+# Display the final plot
+p
+
+```
+
+
+# Regressions
 
 This section is dedicated to regression models outputs and other associated graph.
 
@@ -1157,7 +1227,7 @@ ggplot(dataForest) +
 ```
 
 
-# Epidemiology related plots
+# Epidemiology 
 
 This section is dedicated to graphs that are often used in epidemiology. Those graph can of course be used in other fields (data don't care about your feelings), but I am obviously speaking in the context of my own job. I am indeed biased.
 
