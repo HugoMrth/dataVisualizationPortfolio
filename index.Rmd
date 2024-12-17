@@ -76,6 +76,13 @@ library(ggseqplot)
 library(ggh4x)
 library(ggstatsplot)
 
+# body
+library(sfheaders)
+library(cartogram)
+library(mapsf)
+library(gganatogram)
+library(viridis)
+
 # Other graphics tools
 library(treemap)
 ```
@@ -599,7 +606,7 @@ ggplot(dataLinechart, aes(x = year)) +
 ```
 
 
-## Boxplot
+## Boxplots
 
 I don't really enjoy boxplots as I feel they get quite boring. But you can add some twists to make it interesting !
 
@@ -755,7 +762,49 @@ ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
 
 ## Scatter plots
 
-Scatter plots are not often used in my field of work, but they can come in handy in niche situations. I especially like the 3D scatterplot !
+Scatter plots are not often used in my field, but they can come in handy in niche situations. I especially like the 3D scatterplot !
+
+### 2D
+
+```{r}
+# Prepare the data
+dataScatter <- iris %>%
+  mutate(
+    # Assign colors to each species using hex color codes
+    p_col = ifelse(Species == "setosa", "#EB5E55", 
+                   ifelse(Species == "versicolor", "#C6D8D3", "#9984D4"))
+  )
+
+# Create a scatterplot using ggplot2
+ggplot(dataScatter) +
+  geom_point(
+    aes(
+      x = Sepal.Length,  # Map Sepal.Length to the x-axis
+      y = Sepal.Width,   # Map Sepal.Width to the y-axis
+      col = Species      # Color points based on the Species column
+    ),
+    size = 4             # Set the size of the points
+  ) + 
+  scale_x_continuous(
+    limits = c(3.8, 8),   # Set limits for the x-axis
+    breaks = 0:10,        # Define the breaks (tick marks) on the x-axis
+    expand = c(0, 0)      # Remove extra padding around the x-axis limits
+  ) + 
+  scale_y_continuous(
+    limits = c(1.8, 5),   # Set limits for the y-axis
+    breaks = 0:5,         # Define the breaks (tick marks) on the y-axis
+    expand = c(0, 0)      # Remove extra padding around the y-axis limits
+  ) +
+  scale_colour_manual(
+    values = c("#EB5E55", "#C6D8D3", "#9984D4")  # Define custom colors for Species
+  ) +
+  theme_classic() +        # Apply a classic theme (minimal grid lines, clean appearance)
+  xlab("Length (mm)") +    # Set the x-axis label
+  ylab("Width (mm)") +     # Set the y-axis label
+  labs(subtitle = "Sepal caracteristics per specie")  # Add a subtitle to the plot
+
+```
+
 
 ### 3D
 
@@ -821,13 +870,42 @@ for (i in 1:nrow(dataScatter)) {
 p
 
 ```
+## Pie charts
+
+Last on the list of basic plots is the infamous pie chart : often hated, forever in our heart.
+
+```{r}
+# Create data for the pie chart
+dataPie <- iris$Species  # Extract the species column from the iris dataset
+group <- names(sort(table(dataPie), decreasing = TRUE))  # Get species names sorted by frequency
+val <- round(sort(table(dataPie), decreasing = TRUE) / length(dataPie) * 100, 0)  # Calculate percentages for each species
+
+# Create the pie chart using ggplot2
+ggplot(mapping = aes(x = "", y = val, fill = group)) +
+    # Add bars to represent proportions
+    geom_bar(stat = "identity", width = 1) +
+    # Add percentage labels on the chart
+    geom_text(
+        aes(label = ifelse(val > 5, paste0(val, "%"), "")),  # Display labels only for slices > 5%
+        position = position_stack(vjust = 0.5)  # Center the text within each segment
+    ) +
+    # Convert the bar chart to a polar coordinate system to create a pie chart
+    coord_polar("y", start = 0) +
+    # Set the color palette for the pie chart segments
+    scale_fill_brewer(palette = "Pastel1") +
+    # Customize the legend
+    guides(fill = guide_legend(title = "Specie")) +
+    # Remove all axis elements for a clean look
+    theme_void()
+
+```
 
 
 # Regressions
 
 This section is dedicated to regression models outputs and other associated graph.
 
-## Survival curve
+## Survival curves
 
 Starting with the survival analysis, the most classic graph is the descending survival curve :
 
@@ -1231,7 +1309,7 @@ ggplot(dataForest) +
 
 This section is dedicated to graphs that are often used in epidemiology. Those graph can of course be used in other fields (data don't care about your feelings), but I am obviously speaking in the context of my own job. I am indeed biased.
 
-## Epidemic curve
+## Epidemic curves
 
 Epidemic curves are just like bar plots, but the time component displayed on the X axis make it so that we tend to represent it more like and histogram.
 
@@ -1372,28 +1450,28 @@ It is easier to compare the shape of several curves when they are displayed sepa
 # Create a data frame for histogram visualization
 dataCurve <- data.frame(
   # "Sex" column with repeated values for "Male" and "Female"
-  Sex = c(rep("Male", 323), rep("Female", 349)),
+  Sex = c(rep("Male", 611), rep("Female", 915)),
   # "Date" column with monthly timestamps repeated according to specified counts
   Date = c(
     # Male dates: repeated monthly sequence with specific counts for each month
     rep(seq.POSIXt(
-      as_datetime("2024-01-01 00:00:00", tz = "CET"),
-      as_datetime("2025-01-01 00:00:00", tz = "CET"),
+      as_datetime("2023-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-02-01 00:00:00", tz = "CET"),
       by = "month"
-    ), c(15, 21, 27, 26, 33, 38, 30, 22, 28, 17, 20, 19, 27)),
+    ), c(30, 29, 26, 24, 22, 20, 18, 16, 14, 12, 10, 10, 12, 14, 17, 19, 22, 26, 29, 32, 32 ,33, 34, 36, 37, 37)),
     # Female dates: repeated monthly sequence with specific counts for each month
     rep(seq.POSIXt(
-      as_datetime("2024-01-01 00:00:00", tz = "CET"),
-      as_datetime("2025-01-01 00:00:00", tz = "CET"),
+      as_datetime("2023-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-02-01 00:00:00", tz = "CET"),
       by = "month"
-    ), c(34, 41, 56, 32, 29, 33, 37, 26, 21, 11, 9, 12, 8))
+    ), c(30, 31, 31, 31, 31, 33, 33, 34, 35, 36, 38, 39, 39, 40, 40, 41, 40, 40, 39, 37, 35, 34, 34, 32, 32, 30))
   )
 )
 
 # Define monthly breaks for the histogram
 monthly_breaks <- seq.POSIXt(
-  from = as_datetime("2024-01-01 00:00:00", tz = "CET"),  # Start of the range
-  to = as_datetime("2025-01-01 00:00:00", tz = "CET"),    # End of the range
+  from = as_datetime("2023-01-01 00:00:00", tz = "CET"),  # Start of the range
+  to = as_datetime("2025-02-01 00:00:00", tz = "CET"),    # End of the range
   by = "month"                                            # Break intervals (monthly)
 )
 
@@ -1410,7 +1488,7 @@ ggplot(dataCurve) +
   ) + 
   # Add horizontal lines at intervals of 5
   geom_hline(
-    yintercept = seq(5, ymax, by = 5),  # Sequence of horizontal line positions
+    yintercept = seq(5, 45, by = 5),  # Sequence of horizontal line positions
     color = "white"                     # Line color
   ) +
   # Add a horizontal line at y=0
@@ -1427,8 +1505,8 @@ ggplot(dataCurve) +
   # Customize y-axis labels and ticks
   scale_y_continuous(
     expand = c(0, 0),            # No expansion at the axis limits
-    limits = c(0, 60),           # Set y-axis limits between 0 and 60
-    breaks = seq(0, 60, 10)      # Major breaks at intervals of 10
+    limits = c(0, 45),           # Set y-axis limits between 0 and 60
+    breaks = seq(0, 45, 10)      # Major breaks at intervals of 10
   ) +
   # Add plot titles and axis labels
   labs(
@@ -1452,7 +1530,8 @@ ggplot(dataCurve) +
     panel.grid.major.y = element_line(
       colour = "lavenderblush4", # Major grid line color
       size = 1                   # Major grid line size
-    )
+    ),
+    axis.text.x = element_text(angle = 90)
   )
 ```
 
@@ -1796,9 +1875,99 @@ ggarrange(
 
 Nested data are as tricky as care trajectories. You have to handle the data properly and be careful in the level of detail that you want to display.
 
+### Sunburst 
+
+Sunburst are the goto when it comes to nested data representation. The ploty package interactivity makes it even better. Here is a first example showing only the nested components :
+
+```{r}
+# Create a dataset for the sunburst chart
+gdataSunburst <- data.frame(
+  ids = c("Drug indication",  # Root node
+          "Cardio", "Neuro", "Psy",  # First level of the hierarchy
+          "Blood pressure", "Cardio - Other",  # Second level under "Cardio"
+          "Parkinson disease", "Neuro - Other",  # Second level under "Neuro"
+          "C03EA04", "C09CA03", "C09DA03", "C07FB03",  # Third level under "Blood pressure" and "Cardio - Other"
+          "N03AA03", "N03AG06", "N04BB01", "N04BA02",  # Third level under "Neuro - Other" and "Parkinson disease"
+          "N03AG01"),  # Third level under "Psy"
+  labels = c("Drug<br>indication",  # Display label for root node
+             "Cardio", "Neuro", "Psy",  # Display labels for first level
+             "Blood<br>pressure", "Other",  # Display labels for second level under "Cardio"
+             "Parkinson<br>disease", "Other",  # Display labels for second level under "Neuro"
+             "C03EA04", "C09CA03", "C09DA03", "C07FB03",  # Display labels for third level
+             "N03AA03", "N03AG06", "N04BB01", "N04BA02",  # Display labels for third level
+             "N03AG01"),  # Display label for third level under "Psy"
+  parents = c("",  # Root node has no parent
+              "Drug indication", "Drug indication", "Drug indication",  # First level nodes are children of "Drug indication"
+              "Cardio", "Cardio",  # Second level nodes under "Cardio"
+              "Neuro", "Neuro",  # Second level nodes under "Neuro"
+              "Blood pressure", "Cardio - Other", "Blood pressure", "Blood pressure",  # Third level under "Cardio"
+              "Neuro - Other", "Neuro - Other", "Parkinson disease", "Parkinson disease",  # Third level under "Neuro"
+              "Psy")  # Third level under "Psy"
+)
+
+# Generate a sunburst plot using the Plotly package
+plot_ly(
+  data = gdataSunburst,  # Data for the chart
+  ids = ~ids,  # Unique identifiers for each node
+  labels = ~labels,  # Labels to display on the chart
+  parents = ~parents,  # Define parent-child relationships
+  type = 'sunburst'  # Specify the chart type as a sunburst diagram
+)
+
+```
+And a second version adding frequencies :
+
+
+```{r}
+# Create a dataset for the sunburst chart with hierarchical relationships and node values
+dataSunburst <- data.frame(
+  ids = c("Drug indication",  # Root node
+          "Cardio", "Neuro", "Psy",  # First-level children of the root
+          "Blood pressure", "Cardio - Other",  # Second-level children under "Cardio"
+          "Parkinson disease", "Neuro - Other",  # Second-level children under "Neuro"
+          "C03EA04", "C09CA03", "C09DA03", "C07FB03",  # Third-level nodes under "Cardio"
+          "N03AA03", "N03AG06", "N04BB01", "N04BA02",  # Third-level nodes under "Neuro"
+          "N03AG01"),  # Third-level node under "Psy"
+  labels = c("Drug<br>indication",  # Label for root node
+             "Cardio", "Neuro", "Psy",  # Labels for first-level children
+             "Blood<br>pressure", "Other",  # Labels for second-level children under "Cardio"
+             "Parkinson<br>disease", "Other",  # Labels for second-level children under "Neuro"
+             "C03EA04", "C09CA03", "C09DA03", "C07FB03",  # Labels for third-level nodes
+             "N03AA03", "N03AG06", "N04BB01", "N04BA02",  # Labels for third-level nodes
+             "N03AG01"),  # Label for third-level node under "Psy"
+  parents = c("",  # Root node has no parent
+              "Drug indication", "Drug indication", "Drug indication",  # First-level parents
+              "Cardio", "Cardio",  # Second-level parents under "Cardio"
+              "Neuro", "Neuro",  # Second-level parents under "Neuro"
+              "Blood pressure", "Cardio - Other", "Blood pressure", "Blood pressure",  # Third-level parents under "Cardio"
+              "Neuro - Other", "Neuro - Other", "Parkinson disease", "Parkinson disease",  # Third-level parents under "Neuro"
+              "Psy"),  # Third-level parent under "Psy"
+  n = c(464,  # Total count for the root node
+        253, 176, 35,  # Counts for first-level nodes
+        189, 64,  # Counts for second-level nodes under "Cardio"
+        127, 49,  # Counts for second-level nodes under "Neuro"
+        89, 64, 65, 35,  # Counts for third-level nodes under "Cardio"
+        38, 11, 80, 47,  # Counts for third-level nodes under "Neuro"
+        35)  # Count for third-level node under "Psy"
+)
+
+# Generate a sunburst plot using the Plotly package
+plot_ly(
+  data = dataSunburst,  # Use the prepared dataset
+  ids = ~ids,  # Specify unique identifiers for each node
+  labels = ~labels,  # Specify labels for each node
+  parents = ~parents,  # Specify parent-child relationships
+  values = ~n,  # Use the "n" column for node sizes
+  type = 'sunburst',  # Set the chart type to sunburst
+  branchvalues = 'total'  # Specify that values are distributed among child branches
+)
+
+```
+
+
 ### Treemap
 
-Treemaps get the job done. They're not quite as aesthetic as some other (curvy) options, but I feel like the fact they are squared makes it easier to read the data and "see" which area is bigger.
+Treemaps get the job done. They're not quite as aesthetic as some other (curvy) options, but I feel like since they are squared makes it easier to read the data and "see" which area is bigger. The fact that each are is nested within its parent can also be an upside in some cases.
 
 ```{r}
 # Create a data frame containing cause of death, details (subcategory), and occurrences
@@ -1856,5 +2025,125 @@ treemap(
   aspRatio = 1                                # Set aspect ratio to make the blocks square
 )
 
+```
+
+# Human body
+
+## Shape
+
+Using a template of a human body and using it as a map (each body part becoming a 'region'), it becomes easy to represent the different parts of the body depending on a measure. This allow for a very visual way to visualize the data. The initial template is from the bdgramR package (https://github.com/josedv82/bdgramR), which I further modified to fit the needs of a cartography approach.
+
+### Raw
+
+```{r}
+# Load the dataset from the specified file
+load("C:/Users/hugo.marthinet/Downloads/index.Rdata")
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Create a frequency table for muscle injuries
+freqTable <- data.frame(
+  Muscle = as.character(unique(dataBodygram$Muscle)),  # Unique muscles in the dataset
+  freq = rpois(length(unique(dataBodygram$Muscle)), 8)^2  # Simulate injury frequencies using a Poisson distribution
+)
+
+# Join the frequency table with the main dataBodygram dataset
+dataBodygram <- left_join(x = dataBodygram, y = freqTable)
+
+# Generate spatial polygons for the body map
+bodyMap <- sf_polygon(
+    dataBodygram,
+    x = "x",  # X-coordinates of the polygon points
+    y = "y",  # Y-coordinates of the polygon points
+    polygon_id = "Id",  # Identifier for each polygon
+    keep = TRUE  # Retain non-polygon data in the result
+)
+
+# Visualize the body map with a choropleth map
+mf_map(
+  x = bodyMap,  # Spatial object to plot
+  type = "choro",  # Choropleth map type
+  var = "freq",  # Variable to map (frequency of injuries)
+  pal = rev(c("#BF0416", "#d53e4f", "#f46d43", "#fdae61", 
+              "#fee08b", "#e6f598", "#abdda4", "#66c2a5")),  # Color palette for mapping frequencies
+  breaks = ceiling(seq(0, max(dataBodygram$freq) * 1.05, length.out = 9)),  # Define class intervals for the variable
+  border = "#6b4266",  # Border color for polygons
+  lwd = 0.5,  # Line width for polygon borders
+  leg_title = "Injury frequencies"  # Legend title
+)
+```
+
+### Weighted
+
+A funny way to further tweak this graphical display of the human body is to apply anamorphism to the different body parts by applying a weight depending on the value. 
+
+```{r}
+# Load the dataset from the specified file
+load("C:/Users/hugo.marthinet/Downloads/index.Rdata")
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Create a frequency table for muscle injuries
+freqTable <- data.frame(
+  Muscle = as.character(unique(dataBodygram$Muscle)),  # Unique muscles in the dataset
+  freq = rpois(length(unique(dataBodygram$Muscle)), 8)^2  # Simulate injury frequencies using a squared Poisson distribution
+)
+
+# Join the frequency table with the main dataBodygram dataset
+dataBodygram <- left_join(x = dataBodygram, y = freqTable)
+
+# Create a body map with cartogram distortion based on injury frequency
+bodyMap <- cartogram_cont(
+  sf_polygon(
+    dataBodygram,
+    x = "x",  # X-coordinates for the polygon vertices
+    y = "y",  # Y-coordinates for the polygon vertices
+    polygon_id = "Id",  # Identifier for each polygon
+    keep = TRUE  # Retain non-polygon data in the result
+  ),
+  weight = "freq",  # Weight for distortion (injury frequency)
+  itermax = 5  # Maximum number of iterations for cartogram adjustment
+)
+
+# Visualize the distorted body map with a choropleth representation
+mf_map(
+  x = bodyMap,  # Spatial object to plot (distorted body map)
+  type = "choro",  # Choropleth map type
+  var = "freq",  # Variable to map (frequency of injuries)
+  pal = rev(c("#BF0416", "#d53e4f", "#f46d43", "#fdae61", 
+              "#fee08b", "#e6f598", "#abdda4", "#66c2a5")),  # Color palette for mapping frequencies
+  breaks = ceiling(seq(0, max(dataBodygram$freq) * 1.05, length.out = 9)),  # Define class intervals
+  border = "#6b4266",  # Color for polygon borders
+  lwd = 0.5,  # Line width for borders
+  leg_title = "Injury frequencies"  # Title for the legend
+)
+```
+
+## Organs 
+
+Using the gganatogram package (https://github.com/jespermaag/gganatogram), the same thing can be done representing the organs. Anamorphism isn't possible with this template, but it allows to represent parts of the body that can't be included in the previous graph.
+
+```{r}
+gganatogram(data=hgMale_key, fillOutline='#440154FF', organism='human', sex='male', fill="value") + theme_void() + scale_fill_viridis()
+```
+
+```{r}
+organPlot <- data.frame(organ = c("heart", "leukocyte", "nerve", "brain", "liver", "stomach", "colon"), 
+ type = c("circulation", "circulation",  "nervous system", "nervous system", "digestion", "digestion", "digestion"), 
+ colour = c("red", "red", "purple", "purple", "orange", "orange", "orange"), 
+ value = c(10, 5, 1, 8, 2, 5, 5), 
+ stringsAsFactors=F)
+
+#>       organ           type colour value
+#> 1     heart    circulation    red    10
+#> 2 leukocyte    circulation    red     5
+#> 3     nerve nervous system purple     1
+#> 4     brain nervous system purple     8
+#> 5     liver      digestion orange     2
+#> 6   stomach      digestion orange     5
+#> 
+gganatogram(data=organPlot, fillOutline='#a6bddb', organism='human', sex='male', fill="colour") + theme_void()
 ```
 
