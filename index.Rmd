@@ -1236,6 +1236,102 @@ ggplot(dataForest) +
   )
 ```
 
+Here is another version :
+
+```{r}
+# Create the data frame for the forest plot
+dataForest <- data.frame(
+  var = factor(c(rep("Période 1", 7), rep("Socio-démo", 8), 
+          rep("ATCD addictions", 3), 
+          rep("ATCD TTT", 2),
+          rep("Comorbidités", 9)),
+          levels = c("Période 1", "Socio-démo", "ATCD addictions", "ATCD TTT", "Comorbidités")), # Variables
+  mod = c("Baclofène", "Acamprosate", "Asso (non Disul)", "Asso Disul", "Disulfirame", "Nalmefène", "Naltrexone",
+          "Sexe : Femme", "Age", "CMU/ACS", paste0("FDep : Quintile n°", 1:5), 
+          "Hospitalisation", "Pathologie grave", "Nb jours d'hospit.",
+          "Ttt psychiatrique", "Ttt sub. opioïdes",
+          "Troubles addictifs", "Maladies coronaires", "Insuf. cardiaque",
+          "Diabète", "Cancer", "Troubles psy enfance", "Autres troubles psy", 
+          "Mal. respiratoires", "Mal. foie/pancréas"), # Categories or modalities within variables
+  estimate = c(NA, 0.98, 1.38, 1.33, 1.35, 1.27, 0.99, 1.19, 0.98, 1.07, NA, 
+               1.02, 1.02, 1.01, 1.11, 0.79, 0.95, 1.00, 0.66, 0.92, 0.71, 1.00, 0.99, 0.89,
+               1.12, 0.76, 0.75, 0.92, 0.95), # Point estimates (Odds Ratios)
+  conf.low = c(NA, 0.94, 1.27, 1.32, 1.30, 1.25, 0.97, 1.18, 0.98, 1.06, NA,
+               1.00, 1.00, 0.99, 1.09, 0.78, 0.92, 1.00, 0.65, 0.90, 0.69, 0.96,
+               0.91, 0.86, 1.08, 0.69, 0.73, 0.90, 0.93), # Lower bounds of confidence intervals
+  conf.high = c(NA, 1.02, 1.50, 1.35, 1.40, 1.29, 1.01, 1.21, 0.98, 1.09, NA, 
+                1.04, 1.03, 1.03, 1.13, 0.81, 0.99, 1.00, 0.67, 0.95, 0.72, 
+                1.04, 1.08, 0.91, 1.16, 0.84, 0.76, 0.94, 0.98)# Upper bounds of confidence intervals
+) %>% 
+  mutate(
+    id = 1:29, # Assign a unique ID to each row
+    label = ifelse(is.na(estimate), "Ref", 
+                   paste0(formatC(estimate, 2, format = "f"), " [",
+                          formatC(conf.low, 2, format = "f"), "-", 
+                          formatC(conf.high, 2, format = "f"), "]")), 
+    # Create labels for display: "estimate [conf.low-conf.high]" or "Ref" if missing
+    estimate = ifelse(is.na(estimate), 1, estimate), # Replace missing estimates with 1 (reference)
+    conf.low = ifelse(is.na(conf.low), 1, conf.low), # Replace missing lower bounds with 1 (reference)
+    conf.high = ifelse(is.na(conf.high), 1, conf.high), # Replace missing upper bounds with 1 (reference)
+    signif = ifelse(conf.low <= 1 & conf.high >= 1, "p>0.05", "p<0.05") 
+    # Determine significance: overlaps 1 (p>0.05) or not (p<0.05)
+  )
+
+
+ # Create the forest plot using ggplot2
+  ggplot(dataForest) + 
+    geom_vline(
+      xintercept = 1, # Reference line at Odds Ratio = 1
+      color = "gray25", 
+      linetype = 2 # Dashed line
+    ) + 
+    geom_vline(
+      xintercept = c(0.5, 0.65, 0.8, 1.25, 1.5), # Additional vertical lines for log-scale guidance
+      color = "gray75",
+      linetype = "dotted"
+    ) +
+    geom_errorbar(
+      aes(
+        y = reorder(mod, -id), # Reorder y-axis labels based on ID
+        xmin = conf.low, # Lower bound of the confidence interval
+        xmax = conf.high # Upper bound of the confidence interval
+      ),
+      position = position_dodge(0.5), # Adjust error bar position
+      width = 0.4, # Width of the error bars
+      size = 0.8 # Thickness of the error bars
+    ) + 
+    geom_point(
+      aes(x = estimate, y = reorder(mod, -id)), # Add points for the estimates
+      position = position_dodge(width = 0.5), # Adjust point position
+      size = 2.5 # Size of the points
+    ) + 
+    scale_x_log10( # Use a logarithmic scale for x-axis
+      breaks = c(0.5, 0.65, 0.8, 1, 1.25, 1.5, 2), # Specify tick marks
+      limits = c(0.6, 2), # Set x-axis limits
+      expand = c(0, 0)
+    ) +
+    # scale_color_manual(
+    #   name = "Significativité", # Legend title for significance
+    #   values = c("red", "black") # Colors for significant and non-significant points
+    # ) +
+    facet_grid(
+      rows = vars(var), # Create separate panels for each variable
+      scales = "free", # Allow scales to adjust freely per panel
+      space = "free_y",
+      switch = "both" # Switch facet labels to both sides
+    ) +
+    xlab("Odds ratios") + # Label for the x-axis
+    ylab("") + # Remove y-axis label
+    theme_classic() + # Use a clean, minimal theme
+    theme(panel.grid.major.y = element_line(colour = "lightgray"),
+          text = element_text(size = 10)) + # Add gridlines for readability
+    geom_text(
+      aes(x = 1.75, y = reorder(mod, -id), label = dataForest$label), # Add text labels for estimates
+      size = 3
+    )
+```
+
+
 Here is a simpler version, with no OR table and a lighter display :
 
 ```{r}
@@ -2037,7 +2133,7 @@ Using a template of a human body and using it as a map (each body part becoming 
 
 ```{r}
 # Load the dataset from the specified file
-load("C:/Users/hugo.marthinet/Downloads/index.Rdata")
+load("C:/Users/hugo.marthinet/Downloads/dataVisualizationPortfolio-main/index.Rdata")
 
 # Set a seed for reproducibility
 set.seed(123)
@@ -2080,7 +2176,7 @@ A funny way to further tweak this graphical display of the human body is to appl
 
 ```{r}
 # Load the dataset from the specified file
-load("C:/Users/hugo.marthinet/Downloads/index.Rdata")
+load("C:/Users/hugo.marthinet/Downloads/dataVisualizationPortfolio-main/index.Rdata")
 
 # Set a seed for reproducibility
 set.seed(123)
