@@ -787,6 +787,78 @@ ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
   xlab("Education level")
 ```
 
+### With histogram
+
+```{r}
+plotData <- data.frame(
+  val = rpois(100, 5)
+)
+
+p1 <- ggplot(plotData) +
+  # Add a boxplot layer for setup scores grouped by operation ID
+  geom_histogram(
+    aes(x = val),# Map operation ID and setup scores to boxplot
+    fill = "white",
+    color = "black",
+    closed = "left",
+    binwidth = 1
+    ) +
+  # Label the x-axis
+  xlab("") +
+  ylab("") +
+  # Customize the y-axis scale
+  scale_x_continuous(
+    limits = c(0, 15),         # Set y-axis limits between 0 and 10
+    breaks = 0:15,             # Add breaks at each integer value
+    expand = c(0, 0)# Remove padding on the axis
+  ) +
+  # Apply a minimal theme for clean visualization
+  theme_minimal() +
+  theme(
+    title = element_text(vjust = 0),
+    panel.grid.minor = element_blank(),
+    axis.ticks.x = element_line(size = .5),
+    axis.text.x = element_blank(),
+        plot.margin=unit(c(1,1,-0.5,1), "cm")
+  )
+
+p2 <- ggplot(plotData) +
+  # Add a boxplot layer for setup scores grouped by operation ID
+  geom_boxplot(
+    aes(x = val)  # Map operation ID and setup scores to boxplot
+  ) +
+  # Label the x-axis
+  xlab("") +
+  ylab("") +
+  # Customize the y-axis scale
+  scale_x_continuous(
+    limits = c(0, 15),         # Set y-axis limits between 0 and 10
+    breaks = 0:15,             # Add breaks at each integer value
+    expand = c(0, 0) ,
+    position = "top" # Remove padding on the axis
+  ) +
+  scale_y_continuous(
+    breaks = 0,
+    labels = 10
+  ) +
+  # Apply a minimal theme for clean visualization
+  theme_minimal() +
+  theme(
+    axis.line.y = element_line(color = "white"),
+    axis.ticks.y = element_line(color = "white"),
+    axis.text.y = element_text(color = "white"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    
+    axis.line.x = element_line(size = .5),
+    axis.ticks.x = element_line(size = .5),
+    axis.text.x = element_text(size = 12),
+    plot.margin=unit(c(-0.5,1,1,1), "cm")
+  )
+
+grid.arrange(p1, p2)
+
+```
 
 ## Scatter plots
 
