@@ -89,16 +89,11 @@ library(treemap)
 
 # Basics
 
-Starting with the basics : histograms, barplots, pie charts...
-
-Basic is good, but make it pretty.
-
 ## Barplots
 
 
 ### Frequencies
 
-An horizontal and stacked barplot :
 
 ```{r}
 # Simulate data for a barplot
@@ -165,7 +160,6 @@ ggplot(dataBarplot) +
   )
 ```
 
-This one is vertical and dodged :
 
 ```{r}
 # Simulate data for a barplot
@@ -230,9 +224,6 @@ ggplot(dataBarplot) +
 
 ### Proportions
 
-I like to display percentages as stacked barplots, to make it obvious that values sum up to a hundred.
-
-This one has and grid according to the status, and I feel like it is easier to read the proportions differences whenever the bars are horizontal :
 
 ```{r}
 # Simulate data for a bar plot
@@ -319,7 +310,6 @@ ggplot(dataBarplot) +
   )
 ```
 
-Adding some percentages labels and handling long variables names :
 
 ```{r}
 # Create the data frame for the bar plot
@@ -418,7 +408,6 @@ ggplot(data = dataBarplot) +
 
 ### Incidence rates
 
-A very basic one. But adding a second axis with error-bars representing the incidence rate CI95% :
 
 ```{r}
 # Define maximum y-axis value and coefficient for secondary y-axis scaling
@@ -513,7 +502,7 @@ ggplot(dataBarplot, aes(x = year, y = n_cases, width = 0.95)) +
 
 ## Line charts
 
-Let's start with a pretty basic double axis line chart :
+### Classic
 
 ```{r}
 # Create a dataset for line chart visualization
@@ -606,13 +595,58 @@ ggplot(dataLinechart, aes(x = year)) +
 ```
 
 
+### Spaghetti plot
+
+```{r}
+plotData <- data.frame(
+  ID = 1:50,
+  T1 = rnorm(50, mean = 1, sd = 0.1)
+) %>%
+  mutate(
+    T2 = T1 * rnorm(50, mean = 1.5, sd = 0.1),
+    T3 = T2 * rnorm(50, mean = 1.2, sd = 0.1)
+  ) %>%
+  pivot_longer(
+    cols = T1:T3
+  )
+
+ggplot(plotData, 
+       aes(name, value, group = ID)) + 
+  geom_point(color = '#82354F') + 
+  geom_line(color = '#82354F') +
+  # Add titles and axis labels
+  labs(
+    title = ""
+  ) +
+  ylab("Length (cm)" ) +
+  xlab("Time of measurment") +
+  # Customize the y-axis scale
+  scale_x_discrete(                  # Tick intervals
+    labels = c("Week 1", "Week 2", "Week 3"), # Custom tick labels
+    expand = c(0.1, 0)
+  ) +
+  
+  # Customize the y-axis scale
+  scale_y_continuous(
+    limits = c(0,3),
+    breaks = seq(0, 3, .5), 
+    expand = c(0, 0)
+  ) +
+  # Apply a minimal theme to the plot
+  theme_minimal() +
+  # Customize the legend and x-axis text
+  theme(
+    legend.position = "right",                 # Position the legend on the right
+  )
+```
+
+
+
 ## Boxplots
 
-I don't really enjoy boxplots as I feel they get quite boring. But you can add some twists to make it interesting !
 
 ### Classic
 
-Basic setup :
 
 ```{r}
 # Create a data frame for boxplot visualization
@@ -674,7 +708,6 @@ ggplot(dataBoxplot) +
 
 ```
 
-Jitter boxplots fixes one of the classic boxplots downside by adding the points to give a better idea of the data distribution :
 
 ```{r}
 dataBoxplot <- data.frame(
@@ -691,9 +724,6 @@ ggplot(dataBoxplot, aes(x = Group, y = y, colour = Group)) +
   ylab("Some randomly generated values") # Y-axis label
 ```
 
-
-
-Adding some two-by-two testing :
 
 ```{r}
 # Simulate data for a boxplot
@@ -751,8 +781,6 @@ ggboxplot(
 
 ### Violins
 
-Switching to violins plots to add some info and some nice colors :
-
 ```{r}
 ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
   ylab("Workers raw wage") +
@@ -762,7 +790,6 @@ ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
 
 ## Scatter plots
 
-Scatter plots are not often used in my field, but they can come in handy in niche situations. I especially like the 3D scatterplot !
 
 ### 2D
 
@@ -872,7 +899,6 @@ p
 ```
 ## Pie charts
 
-Last on the list of basic plots is the infamous pie chart : often hated, forever in our heart.
 
 ```{r}
 # Create data for the pie chart
@@ -903,11 +929,9 @@ ggplot(mapping = aes(x = "", y = val, fill = group)) +
 
 # Regressions
 
-This section is dedicated to regression models outputs and other associated graph.
 
 ## Survival curves
 
-Starting with the survival analysis, the most classic graph is the descending survival curve :
 
 ```{r}
 # Simulate survival data
@@ -975,7 +999,6 @@ autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +  # Start with a blank
 
 ```
 
-Second version of almost the same curve, adding some confidence interval using ggsurvplot() :
 
 ```{r}
 # Simulate survival data for analysis
@@ -1013,7 +1036,6 @@ ggsurvplot(
 
 ```
 
-Let's add one more event and have an some components (I would use ggsurvplot(), but it does not handle a survfit object having a non binary event) :
 
 ```{r}
 # Simulating survival data
@@ -1097,7 +1119,6 @@ autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +
   )
 ```
 
-Lastly, combining different curves using ggsurvplot() :
 
 ```{r}
 # Create a data frame for survival analysis
@@ -1139,7 +1160,6 @@ ggsurvplot(
 
 ```
 
-Or display the different cruves in a grid :
 
 ```{r}
 fit <- survfit( Surv(time, status) ~ sex, data = colon)
@@ -1162,7 +1182,6 @@ ggsurvplot_facet(fit, colon, facet.by = "rx",
 
 ## Forest plots
 
-Forest plots are the go to graph for any type of regression that present results as exponential of it's coefficients. I really like the existing packages displaying the OR and CI95% so I tried to reproduce it.
 
 ```{r}
 # Create the data frame for the forest plot
@@ -1236,7 +1255,6 @@ ggplot(dataForest) +
   )
 ```
 
-Here is another version :
 
 ```{r}
 # Create the data frame for the forest plot
@@ -1332,8 +1350,6 @@ dataForest <- data.frame(
 ```
 
 
-Here is a simpler version, with no OR table and a lighter display :
-
 ```{r}
 # Create the data frame for the forest plot
 dataForest <- data.frame(
@@ -1403,13 +1419,9 @@ ggplot(dataForest) +
 
 # Epidemiology 
 
-This section is dedicated to graphs that are often used in epidemiology. Those graph can of course be used in other fields (data don't care about your feelings), but I am obviously speaking in the context of my own job. I am indeed biased.
 
 ## Epidemic curves
 
-Epidemic curves are just like bar plots, but the time component displayed on the X axis make it so that we tend to represent it more like and histogram.
-
-Here, I am displaying the two data series as dodged curves, and adding a second axis to displayed the line :
 
 ```{r}
 dataCurve <- data.frame(
@@ -1540,7 +1552,6 @@ ggplot(dataCurve) +
   ))
 ```
 
-It is easier to compare the shape of several curves when they are displayed separately :
 
 ```{r}
 # Create a data frame for histogram visualization
@@ -1631,7 +1642,6 @@ ggplot(dataCurve) +
   )
 ```
 
-Sometimes, you want to now the total number of case, but still display the factor variable :
 
 ```{r}
 # Create a data frame for the bar plot
@@ -1725,11 +1735,9 @@ ggplot(dataCurve) +
 
 ## Care trajectories
 
-Care trajectories are a huge deal in epidemiology. Succession of treatment states can be tricky to display, and is it definitly an pain to handle the data to mke it work.
 
 ### Sankey 
 
-Sankey diagrams are cool. I like them. Look at it :
 
 ```{r}
 createSankeyData <- function(data, states, timesColumns) {
@@ -1884,7 +1892,6 @@ plotSankey(sankeyData$Nodes, sankeyData$Links, add.prop = TRUE)
 
 ### Carpet
 
-Carpet diagrams allow to display some individual trajectories. I really enjoy the facts that you can display the whole population and/or the clusters identified via a clustering method.
 
 ```{r}
 # Create a dataset simulating treatment sequences
@@ -1969,11 +1976,9 @@ ggarrange(
 
 ## Nested Data
 
-Nested data are as tricky as care trajectories. You have to handle the data properly and be careful in the level of detail that you want to display.
 
 ### Sunburst 
 
-Sunburst are the goto when it comes to nested data representation. The ploty package interactivity makes it even better. Here is a first example showing only the nested components :
 
 ```{r}
 # Create a dataset for the sunburst chart
@@ -2011,7 +2016,7 @@ plot_ly(
 )
 
 ```
-And a second version adding frequencies :
+
 
 
 ```{r}
@@ -2063,7 +2068,6 @@ plot_ly(
 
 ### Treemap
 
-Treemaps get the job done. They're not quite as aesthetic as some other (curvy) options, but I feel like since they are squared makes it easier to read the data and "see" which area is bigger. The fact that each are is nested within its parent can also be an upside in some cases.
 
 ```{r}
 # Create a data frame containing cause of death, details (subcategory), and occurrences
@@ -2127,13 +2131,12 @@ treemap(
 
 ## Shape
 
-Using a template of a human body and using it as a map (each body part becoming a 'region'), it becomes easy to represent the different parts of the body depending on a measure. This allow for a very visual way to visualize the data. The initial template is from the bdgramR package (https://github.com/josedv82/bdgramR), which I further modified to fit the needs of a cartography approach.
 
 ### Raw
 
 ```{r}
 # Load the dataset from the specified file
-load("C:/Users/hugo.marthinet/Downloads/dataVisualizationPortfolio-main/index.Rdata")
+load("C:/Users/hugo.marthinet/Downloads/dataVisualizationPortfolio-main/dataVisualizationPortfolio-main/index.Rdata")
 
 # Set a seed for reproducibility
 set.seed(123)
@@ -2172,11 +2175,10 @@ mf_map(
 
 ### Weighted
 
-A funny way to further tweak this graphical display of the human body is to apply anamorphism to the different body parts by applying a weight depending on the value. 
 
 ```{r}
 # Load the dataset from the specified file
-load("C:/Users/hugo.marthinet/Downloads/dataVisualizationPortfolio-main/index.Rdata")
+load("C:/Users/hugo.marthinet/Downloads/dataVisualizationPortfolio-main/dataVisualizationPortfolio-main/index.Rdata")
 
 # Set a seed for reproducibility
 set.seed(123)
@@ -2219,7 +2221,7 @@ mf_map(
 
 ## Organs 
 
-Using the gganatogram package (https://github.com/jespermaag/gganatogram), the same thing can be done representing the organs. Anamorphism isn't possible with this template, but it allows to represent parts of the body that can't be included in the previous graph.
+Using the gganatogram package (https://github.com/jespermaag/gganatogram).
 
 ```{r}
 gganatogram(data=hgMale_key, fillOutline='#440154FF', organism='human', sex='male', fill="value") + theme_void() + scale_fill_viridis()
