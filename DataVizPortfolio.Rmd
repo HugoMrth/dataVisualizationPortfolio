@@ -1,0 +1,2537 @@
+---
+title: "Data Vizualisation Portfolio"
+author: "Hugo Marthinet"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: style.css
+    code_folding: hide
+    toc: true
+    toc_float: true
+    toc_collaped: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+---
+
+```{=html}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Ajouter des boutons aux blocs de code
+  document.querySelectorAll("pre code").forEach(function(block) {
+    const btn = document.createElement("button");
+    btn.innerText = "Copy";
+    btn.className = "copy-btn";
+    btn.addEventListener("click", function() {
+      navigator.clipboard.writeText(block.innerText).then(() => {
+        btn.innerText = "Copied !";
+        setTimeout(() => btn.innerText = "Copy", 2000);
+      });
+    });
+    block.parentNode.style.position = "relative";
+    block.parentNode.appendChild(btn);
+  });
+});
+</script>
+```
+```{r options, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  out.width = '800px'
+)
+```
+
+This is my data visualization portfolio, aka. the ultimate copy and paste tool.
+
+The whole markdown should run by iteself given all the packages are installed and you download the .Rdata file.
+
+Below is the list of all the required packages. Mostly graphical tools, along with some statistical analysis resources. Any non-trivial function call should have the corresponding package specified.
+
+```{r}
+set.seed(123)
+
+# Tidy data
+library(tidyverse)
+library(lubridate)
+
+# Supplementary analysis
+library(survival)
+library(survminer)
+library(TraMineR)
+library(rstatix)
+library(epiR)
+
+# Data
+library(ISLR)
+
+# plotly
+library(plotly)
+
+# ggplot2 and addins
+library(ggplot2)
+library(ggfortify)
+library(ggpubr)
+library(gridExtra)
+library(ggseqplot)
+library(ggh4x)
+library(ggstatsplot)
+library(ggsurvfit)
+
+# body
+library(sfheaders)
+library(cartogram)
+library(mapsf)
+library(viridis)
+# github pkg
+library(gganatogram)
+
+# Other graphics tools
+library(treemap)
+library(fmsb)
+```
+
+# Basics
+
+## Barplots
+
+### Frequencies
+
+```{r}
+# Simulate data for a barplot
+dataBarplot <- data.frame(
+  Episode = rep(c("First Covid-19 episode", "Last Covid-19 episode"), each = 63), # Two Covid episodes
+  Time = factor(rep(rep(c("Acute phase", "3 months or more", "Still persisting"), each = 21), 2),
+                levels = c("Acute phase", "3 months or more", "Still persisting")), # Symptoms last for a given time
+  Symptoms = rep(c("Abdominal pain", "Anxiety", "Chest pain", "Cognitive disfunction", "Cough", # List of possible symptoms
+                          "Depression", "Dizziness", "Fatigue", "Fever", "Gastrointestinal problem",
+                          "Headache", "Joint pain", "Loss of smell or taste", "Menstruation issue", "Neuralgia",
+                          "New allergies", "Shortness of breath", "Sleeping disorder", "Tachycardia", "Tinnitus",
+                          "Troubled vision"), 6),
+    N = c(0, 0, 0, 0, 2, 5, 9, 285, 404, 714, 646, 870, 765, 1873, 2632, 2106, 3181, 3844, # Number of cases
+          3985, 4921, 3529, 0, 0, 0, 0, 0, 0, 3, 38,  51,  49,  82, 116, 119, 287, 142, 448, 
+          190, 336, 158,  81, 502, 0, 1, 4, 6,  12,  12, 6, 315, 243, 192, 232, 212, 930, 394, 
+          394, 902, 781, 351, 460,  92,  1318, 0, 0, 0, 0, 0, 0, 0,  71,  62, 119, 148, 162, 
+          217, 123, 427, 347, 520, 669, 825, 730, 574, 0, 0, 0, 0, 1, 0, 0, 3, 7,  13, 7,  10,  
+          22, 8,  13,  40,  15,  34,  18,  17,  36, 0, 1, 1, 2, 1, 2, 2, 61, 67, 59, 51, 58, 85, 
+          217, 84, 200, 172, 79, 18, 115, 296)) %>%
+  # Total number of cases per symptoms and episode
+  mutate(Ntot = c(rep(by(N[Episode == "First Covid-19 episode"], Symptoms[Episode == "First Covid-19 episode"], sum), 3),
+                  rep(by(N[Episode == "Last Covid-19 episode"], Symptoms[Episode == "Last Covid-19 episode"], sum), 3)))
+
+
+
+# Initialize the plot with the dataset (DATA_ex2_1)
+ggplot(dataBarplot) + 
+  # Add a stacked bar chart (geom_col creates bars with heights determined by 'N')
+  geom_col(
+    mapping = aes(N, reorder(Symptoms, -N), fill = Time), # Map 'N' to x, 'Symptome' to y, and 'Temps' to fill color
+    width = 0.6,                              # Set the bar width
+    position = "stack"                        # Stack bars by the 'fill' variable
+  ) +
+  # Create facets (separate panels) for each level of the 'Episode' variable
+  facet_grid(cols = vars(Episode))  +
+  # Add a vertical line at x = 0 for reference
+  geom_vline(aes(xintercept = 0)) + 
+  # Customize the x-axis scale
+  scale_x_continuous(
+    limits = c(0, 6500),                     # Set the range for the x-axis
+    breaks = seq(0, 6000, 1000),             # Major tick marks every 1000 units
+    minor_breaks = seq(500, 6500, 500),      # Minor tick marks every 500 units
+    expand = c(0, 0)                         # Remove padding on the x-axis
+  ) + 
+  scale_fill_manual(
+    name = "Symptoms duration",
+    values = c('#28AFB0',  '#F6803C',  '#82354F')
+  ) +
+  # Add text labels to display 'Ntot' values next to each bar
+  geom_text(
+    mapping = aes(Ntot + 25, y = Symptoms, label = Ntot), # Position and content of the text
+    hjust = 0,                                            # Align text to the left of its position
+    nudge_x = 1                                           # Slightly nudge text horizontally
+  ) +
+  # Add titles and subtitles (empty here for now)
+  labs(title = "", subtitle = "") + 
+  # Customize the overall appearance of the plot
+  theme(
+    axis.title = element_blank(),                      # Remove axis titles
+    panel.background = element_rect(fill = "white"),   # Set panel background to white
+    panel.grid.major.x = element_line(color = "darkgray"), # Major grid lines for x-axis
+    panel.grid.minor.x = element_line(colour = "lightgray"), # Minor grid lines for x-axis
+    legend.position = "bottom"
+  )
+```
+
+```{r}
+# Simulate data for a barplot
+dataBarplot <- data.frame(
+  Time = factor(rep(c("Acute phase", "3 months or more", "Still persisting"), each = 14),
+                levels = c("Acute phase", "3 months or more", "Still persisting")), # Symptoms last for a given time
+  Symptoms = rep(c("Fatigue", "Loss of smell or taste", "Menstruation issue", "Neuralgia",  "Fever", "Gastrointestinal problem",
+                          "Headache", "Sleeping disorder", "Tachycardia", "Joint pain",
+                          "New allergies", "Shortness of breath", "Tinnitus",
+                          "Troubled vision"), 3),
+    N = c(285, 404, 714, 646, 870, 765, 1873, 2632, 2106, 3181, 3844, # Number of cases
+          3985, 4921, 3529, 38,  51,  49,  82, 116, 119, 287, 142, 448, 
+          190, 336, 158,  81, 502, 315, 243, 192, 232, 212, 930, 394, 
+          394, 902, 781, 351, 460,  92,  1318))
+
+
+# Initialize the plot with the dataset (DATA_ex2_1)
+ggplot(dataBarplot) + 
+  # Add a stacked bar chart (geom_col creates bars with heights determined by 'N')
+  geom_col(
+    mapping = aes(reorder(Symptoms, -N), N, fill = Time), # Map 'N' to x, 'Symptome' to y, and 'Temps' to fill color
+    width = 0.9,                              # Set the bar width
+    position = "dodge"                        # Stack bars by the 'fill' variable
+  ) +
+  # Add a vertical line at x = 0 for reference
+  geom_hline(aes(yintercept = 0)) + 
+  # Customize the x-axis scale
+  scale_y_continuous(
+    limits = c(0, 5500),                     # Set the range for the x-axis
+    breaks = seq(0, 5000, 1000),             # Major tick marks every 1000 units
+    minor_breaks = seq(500, 5500, 500),      # Minor tick marks every 500 units
+    expand = c(0, 0)                         # Remove padding on the x-axis
+  ) + 
+  scale_fill_manual(
+    name = "Symptoms duration",
+    values = c('#28AFB0',  '#F6803C',  '#82354F')
+  ) +
+  # Add text labels to display 'Ntot' values next to each bar
+  geom_text(
+    mapping = aes(x = Symptoms, y = N, label = N), # Position and content of the text
+    nudge_x = rep(c(-0.3, 0, 0.3), each = 14),
+    nudge_y = 120, 
+    size = 2
+  ) +
+  # Add titles and subtitles (empty here for now)
+  labs(title = "", subtitle = "") + 
+  # Customize the overall appearance of the plot
+  theme(
+    axis.title = element_blank(),                      # Remove axis titles
+    panel.background = element_rect(fill = "white"),   # Set panel background to white
+    panel.grid.major.y = element_line(color = "darkgray"), # Major grid lines for x-axis
+    panel.grid.minor.y = element_line(colour = "lightgray"), # Minor grid lines for x-axis
+    legend.position = "bottom",
+    axis.text.x = element_text(
+      size = 10,                               # Font size
+      angle = 45,                              # Rotate text 45 degrees
+      vjust = 1,                               # Vertical alignment
+      hjust = 1                                # Horizontal alignment
+    )
+  )
+```
+
+```{r}
+set.seed(123)
+# Simulate data for a barplot
+dataBarplot <- data.frame(
+  Cancer = rep(c("Cervix", "Vulva", "Vagina", "Penis", "Anus", "Oropharynx"), each = 4),
+  Stage = factor(rep(c("High grade lesions", "Early stage cancer", "Intermediate stage cancer", "Advanced stage cancer"), 6),
+                levels = c("High grade lesions", "Early stage cancer", "Intermediate stage cancer", "Advanced stage cancer")),
+  Cost = 5000) %>%
+  mutate(
+    Cost = ifelse(Cancer == "Cervix", Cost - runif(1, 1000, 2000), Cost),
+    Cost = ifelse(Cancer == "Vulva", Cost - runif(1, 1000, 3000), Cost),
+    Cost = ifelse(Cancer == "Vagina", Cost + runif(1, -1000, 2000), Cost),
+    Cost = ifelse(Cancer == "Penis", Cost + runif(1, 0, 2000), Cost),
+    Cost = ifelse(Cancer == "Anus", Cost + runif(1, 0, 3000), Cost),
+    Cost = ifelse(Cancer == "Oropharynx", Cost + runif(1, 0, 5000), Cost),
+    
+    Cost = ifelse(Stage == "High grade lesions", Cost + runif(1, 2000, 7000), Cost),
+    Cost = ifelse(Stage == "Early stage cancer", Cost + runif(1, 0, 3000), Cost),
+    Cost = ifelse(Stage == "Intermediate stage cancer", Cost - runif(1, 0, 4000), Cost),
+    Cost = ifelse(Stage == "Advanced stage cancer", Cost - runif(1, 0, 5000), Cost),
+   Cost = Cost + 3000
+  )
+
+
+# Initialize the plot with the dataset (DATA_ex2_1)
+ggplot(dataBarplot) + 
+  # Add a stacked bar chart (geom_col creates bars with heights determined by 'N')
+  geom_col(
+    mapping = aes(reorder(Cancer, -Cost), Cost, fill = Stage), # Map 'N' to x, 'Symptome' to y, and 'Temps' to fill color
+    width = 0.6,                              # Set the bar width
+    position = "stack"                        # Stack bars by the 'fill' variable
+  ) +
+  # Add a vertical line at x = 0 for reference
+  geom_vline(aes(xintercept = 0)) + 
+  # Customize the x-axis scale
+  scale_y_continuous(
+    limits = c(0, 50000),                     # Set the range for the x-axis
+    breaks = seq(0, 50000, 10000),             # Major tick marks every 1000 units
+    minor_breaks = seq(5000, 45000, 10000),      # Minor tick marks every 500 units
+    expand = c(0, 0)                         # Remove padding on the x-axis
+  ) + 
+  scale_fill_manual(
+    name = "Cancer stage",
+    values = c('#28AFB0',  "#B2FF9E", '#F6803C',  '#82354F')
+  ) +
+  xlab("Potentially HPV-related disease") +
+  ylab("HCRU costs (euros)") +
+  # Customize the overall appearance of the plot
+  theme(
+    panel.background = element_rect(fill = "white"),   # Set panel background to white
+    panel.grid.major.y = element_line(color = "darkgray"), # Major grid lines for x-axis
+    panel.grid.minor.y = element_line(colour = "lightgray"), # Minor grid lines for x-axis
+    legend.position = "right",
+    axis.text.x = element_text(
+      size = 8,                               # Font size
+      angle = 45,                              # Rotate text 45 degrees
+      vjust = 1,                               # Vertical alignment
+      hjust = 1                                # Horizontal alignment
+    )
+  )
+```
+
+### Proportions
+
+```{r}
+# Simulate data for a bar plot
+dataBarplot <- data.frame(
+  # Create a "Status" column with repeated categories (12 repetitions for each category)
+  Status = rep(c("Family member", "Active worker", "Retired worker"), each = 12),
+  # Create an "Affection" column, categorizing Covid-19 status, with ordered factor levels
+  Affection = factor(
+    rep(rep(c("No Covid-19", "Covid-19", "Long Covid-19"), each = 4), 3),
+    levels = c("No Covid-19", "Covid-19", "Long Covid-19")
+  ),
+  # Create a "Social_satisfaction" column, representing satisfaction levels, with ordered factor levels
+  Social_satisfaction = factor(
+    rep(c("Very satisfied", "Satisfied", "Unsatisfied", "Very unsatisfied"), 9),
+    levels = c("Very satisfied", "Satisfied", "Unsatisfied", "Very unsatisfied")
+  ),
+  # Define a numeric vector "N" representing counts corresponding to the combinations above
+  N = c(65, 255, 70, 16, 38, 131, 41, 7, 21, 123, 59, 10,
+        819, 2532, 591, 130, 640, 1723, 357, 38, 235, 1134, 468, 68,
+        1444, 4212, 677, 128, 528, 1198, 164, 20, 160, 575, 166, 27)
+) %>%
+  # Add new columns using dplyr's mutate function
+  mutate(
+    # Compute the total count (Ntot) for each "Affection" group within each "Status" group
+    Ntot = c(
+      # For "Family member", calculate totals per "Affection" group
+      rep(by(N[Status == "Family member"], Affection[Status == "Family member"], sum), each = 4),
+      # For "Active worker", calculate totals per "Affection" group
+      rep(by(N[Status == "Active worker"], Affection[Status == "Active worker"], sum), each = 4),
+      # For "Retired worker", calculate totals per "Affection" group
+      rep(by(N[Status == "Retired worker"], Affection[Status == "Retired worker"], sum), each = 4)
+    ),
+    # Calculate percentages (P) for each count (N) relative to the total count (Ntot) per group
+    P = N / Ntot * 100
+  )
+
+
+
+
+
+# Initialize the plot with the dataset (DATA_ex2_2)
+ggplot(dataBarplot) + 
+  # Add a stacked bar chart
+  geom_col(
+    mapping = aes(P, Affection, fill = Social_satisfaction), # Map 'P' to x, 'COVID_long_3mod' to y, and 'Q_E1' to fill
+    width = 0.6,                                   # Set the bar width
+    position = "stack",                            # Stack bars by the 'fill' variable
+    color = "white"                                # Add white border to bars
+  ) +
+  # Create facets (separate rows) for each level of the Status variable
+  facet_grid(rows = vars(Status)) +
+  # Add vertical lines at x = 0 and x = 100 for reference
+  geom_vline(aes(xintercept = 0)) + 
+  geom_vline(aes(xintercept = 100)) + 
+  # Customize the x-axis scale
+  scale_x_continuous(
+    limits = c(0, 100.2),                        # Set the range for the x-axis
+    breaks = seq(0, 100, 10),                    # Major tick marks every 10%
+    minor_breaks = seq(5, 95, 10),              # Minor tick marks every 5%
+    expand = c(0, 0),                            # Remove padding on the x-axis
+    labels = paste0(seq(0, 100, 10), "%")       # Append "%" to the tick labels
+  ) + 
+  # Add titles and subtitles (empty here for now)
+  labs(title = " ", subtitle = "") + 
+  # Customize the overall appearance of the plot
+  theme(
+    axis.title = element_blank(),                      # Remove axis titles
+    # axis.text.x = element_blank(),                  # Uncomment to hide x-axis labels
+    # axis.text.y = element_blank(),                  # Uncomment to hide y-axis labels
+    panel.background = element_rect(fill = "white"),   # Set panel background to white
+    panel.grid.major.x = element_line(color = "darkgray"), # Major grid lines for x-axis
+    panel.grid.minor.x = element_line(colour = "lightgray") # Minor grid lines for x-axis
+  ) +
+  # Customize the fill legend for the bar chart
+  scale_fill_manual(
+    "Social interactions",                               # Title for the legend
+    values = rev(RColorBrewer::brewer.pal(4, "RdYlGn")), # Reverse color palette
+    labels = c(                                        # Define labels for legend items
+      "Very satisfied",                           # Very satisfactory
+      "Satisfied",                         # Somewhat satisfactory
+      "Unsatisfied",                       # Somewhat unsatisfactory
+      "Very unsatisfied"                     # Very unsatisfactory
+    )
+  )
+```
+
+```{r}
+# Create the data frame for the bar plot
+dataBarplot <- data.frame(
+  # "LTI" column with long-term illness categories repeated for each age group
+  LTI = factor(rep(
+    c("Leukaemia", "Diabetes (insipidus & mellitus)", "Epilepsy", "Multiple Sclerosis", 
+      "Parkinson & affiliated", "Mental Illness"), 5),
+    levels = c("Leukaemia", "Diabetes (insipidus & mellitus)", "Epilepsy", "Multiple Sclerosis", 
+               "Parkinson & affiliated", "Mental Illness")
+  ),
+  
+  # "Age" column with age group categories repeated for each illness type
+  Age = factor(rep(
+    c("Under 18", "18 to 24 years old", "25 to 44 years old", "45 to 59 years old", "Over 60"), each = 6),
+    levels = c("Under 18", "18 to 24 years old", "25 to 44 years old", "45 to 59 years old", "Over 60")
+  ),
+  
+  # Randomly generated values for the "N" column representing counts
+  N = sample(100:300, 30)
+) %>% 
+  # Calculate the percentage contribution of each count (N) within each illness type (LTI)
+  mutate(
+    percent = as.numeric(unlist(by(N, LTI, function(x) {x / sum(x) * 100})))[rep(seq(1, 26, 5), 5) + rep(0:4, each = 6)],
+    # Label for percentages, shown only if the value exceeds 2%
+    lab = ifelse(percent > 2, paste0(formatC(percent, 1, format = "f"), "%"), "")
+  )
+
+# Initialize a vector for positioning text labels within each bar
+x_text <- rep(NA, nrow(dataBarplot))
+
+# Calculate the cumulative y-position for placing the text labels
+for (i in unique(dataBarplot$LTI)) {
+  for (j in 1:sum(dataBarplot$LTI == i)) {
+    ifelse(j == 1,
+           x_text[which(dataBarplot$LTI == i)[j]] <- dataBarplot$percent[dataBarplot$LTI == i][j] / 2,
+           x_text[which(dataBarplot$LTI == i)[j]] <- sum(dataBarplot$percent[dataBarplot$LTI == i][1:(j-1)]) +
+                          dataBarplot$percent[dataBarplot$LTI == i][j] / 2)
+  }
+}
+dataBarplot$x_text <- 100 - x_text  # Adjust text position to align with the plot
+
+# Generate the bar plot
+ggplot(data = dataBarplot) +
+  # Create stacked bars for proportions by age group
+  geom_col(
+    mapping = aes(x = LTI, y = percent, fill = Age),
+    width = 0.6,           # Bar width
+    position = "stack",    # Stacked bar position
+    color = "white"        # Bar border color
+  ) +
+  
+  # Add percentage labels to each segment of the bar
+  geom_text(
+    aes(x = LTI, y = x_text, label = lab),
+    size = 2,              # Font size
+    colour = "white"       # Text color
+  ) +
+  
+  # Add titles and axis labels
+  labs(
+    title = "Long term illnesses per age group", # Title
+    ylab = "Proportion",                        # Y-axis label
+    xlab = ""                                   # X-axis label (empty)
+  ) +
+  
+  # Customize the y-axis scale
+  scale_y_continuous(
+    breaks = seq(0, 100, 25),                   # Tick intervals
+    labels = c("0%", "25%", "50%", "75%", "100%") # Custom tick labels
+  ) +
+  
+  # Customize the fill colors for the "Age" categories
+  scale_fill_manual(
+    values = c('#1E5471', '#28AFB0', '#F6803C', '#82354F', '#E0D6FF'),
+    name = "Classe ATC1"                       # Legend title
+  ) +
+  
+  # Apply a minimal theme to the plot
+  theme_minimal() +
+  
+  # Customize the legend and x-axis text
+  theme(
+    legend.position = "right",                 # Position the legend on the right
+    axis.text.x = element_text(
+      size = 10,                               # Font size
+      angle = 45,                              # Rotate text 45 degrees
+      vjust = 1,                               # Vertical alignment
+      hjust = 1                                # Horizontal alignment
+    )
+  )
+
+```
+
+### Incidence rates
+
+```{r}
+# Define maximum y-axis value and coefficient for secondary y-axis scaling
+ymax <- 200
+coeff <- 70 / 200
+
+# Create data frame for bar plot
+dataBarplot <- data.frame(
+  year = 2012:2022,                             # Years from 2012 to 2022
+  n_cases = c(120, 87, 78, 96, 117, 153, 139, 164, 181, 188, 163), # Number of cases per year
+  pop = rep(300000, 11)                         # Constant population size of 300,000
+) %>%
+  mutate(
+    # Calculate incidence rate (IR) per 100,000 population
+    IR = n_cases / pop * 100000,
+    # Calculate confidence intervals for the incidence rate
+    IR_lower = epi.conf(cbind(n_cases, pop), ctype = "inc.rate", method = "exact")[, 2] * 100000,
+    IR_upper = epi.conf(cbind(n_cases, pop), ctype = "inc.rate", method = "exact")[, 3] * 100000
+  )
+
+# Create the plot
+ggplot(dataBarplot, aes(x = year, y = n_cases, width = 0.95)) +
+  # Add bars for number of cases
+  geom_col(
+    mapping = aes(fill = "Incidence"),
+    fill = "#AAC0AF" # Bar color
+  ) +
+  # Add a line for incidence rate (IR)
+  geom_line(
+    aes(
+      x = year,
+      y = IR,
+      colour = "Incidence rate" # Legend label for line
+    ),
+    linetype = 1,               # Solid line
+    size = 1,                   # Line thickness
+    colour = "black"            # Line color
+  ) +
+  # Add error bars for confidence intervals of the incidence rate
+  geom_errorbar(
+    aes(
+      x = year,
+      ymin = IR_lower,           # Lower bound of the confidence interval
+      ymax = IR_upper,           # Upper bound of the confidence interval
+      width = 0.2                # Error bar width
+    )
+  ) +
+  # Add text labels for the number of cases above each bar
+  geom_text(
+    aes(x = year, y = n_cases, label = n_cases),
+    nudge_y = 7,                # Offset text above the bars
+    size = 6                    # Font size
+  ) +
+  # Customize the y-axis
+  scale_y_continuous(
+    expand = c(0, 0),           # Remove padding around the axis
+    limits = c(0, ymax),        # Set y-axis limits
+    breaks = seq(0, ymax, 25),  # Major tick marks
+    name = "Incidence",         # Left y-axis label
+    sec.axis = sec_axis(
+      trans = ~ . * coeff,      # Transformation for secondary axis
+      name = "Incidence rate",  # Right y-axis label
+      breaks = seq(0, ymax * coeff, 10) # Tick marks for secondary axis
+    )
+  ) +
+  # Customize the x-axis
+  scale_x_continuous(
+    breaks = 2012:2022,         # Tick marks for each year
+    labels = 2012:2022,         # Labels for each year
+    name = ""                   # Empty label for the x-axis
+  ) +
+  # Apply a classic theme
+  theme_classic() +
+  # Customize grid lines, axis text, and axis colors
+  theme(
+    panel.grid.major.y = element_line(colour = "grey"),    # Major grid lines
+    panel.grid.minor.y = element_line(colour = "lightgray"), # Minor grid lines
+    axis.text.x = element_text(size = 11),                # Font size for x-axis labels
+    axis.line.y.left = element_line(color = "#AAC0AF"),   # Color for left y-axis line
+    axis.title.y.left = element_text(color = "#AAC0AF"),  # Color for left y-axis title
+    axis.text.y.left = element_text(color = "#AAC0AF")    # Color for left y-axis labels
+  ) +
+  # Add titles and remove legend title
+  labs(
+    title = "",                     # Plot title
+    fill = "",                      # Legend title (empty)
+    x = " ",                        # x-axis title (empty)
+    y = " "                         # y-axis title (empty)
+  )
+```
+
+## Line charts
+
+### Classic
+
+```{r}
+# Create a dataset for line chart visualization
+dataLinechart <- data.frame(
+  year = seq.Date(as.Date("2015-01-01"), as.Date("2023-01-01"), by = "year"),  # Sequence of years from 2015 to 2023
+  n_tlc = c(545268, 668497, 551234, 619147, 582365, 854256, 968214, 1023578, 945127),  # Number of teleconsultations per year
+  prop_disp = c(0.23, 0.25, 0.24, 0.28, 0.25, 0.35, 0.38, 0.41, 0.37)  # Proportion of teleconsultations with dispensing
+) %>%
+  mutate(
+    n_tlc_disp = n_tlc * prop_disp  # Calculate teleconsultations with dispensing
+  )
+
+# Define the maximum value for y-axis scaling
+ymax <- 1250000
+
+# Create the plot using ggplot2
+ggplot(dataLinechart, aes(x = year)) +
+  # Add line and points for teleconsultations with dispensing
+  geom_line(aes(y = n_tlc_disp, color = "Teleconsultations with dispensing", lty = "Teleconsultations with dispensing")) +
+  geom_point(aes(x = year, y = n_tlc_disp, color = "Teleconsultations with dispensing"), size = 1.0) +
+  
+  # Add line and points for total teleconsultations
+  geom_line(aes(y = n_tlc, color = "Teleconsultations", lty = "Teleconsultations")) +
+  geom_point(aes(x = year, y = n_tlc, color = "Teleconsultations"), size = 1.0) +
+  
+  # Add line and points for the ratio (scaled proportion)
+  geom_line(aes(y = (prop_disp * ymax), color = "Ratio", lty = "Ratio")) +
+  geom_point(aes(x = year, y = (prop_disp * ymax), color = "Ratio"), size = 1.0) +
+  
+  # Set labels for the legend
+  labs(color = "", lty = "") +
+  
+  # Customize the colors for each line
+  scale_colour_manual(values = c(
+    "Teleconsultations with dispensing" = "#be123c",
+    "Teleconsultations" = "#1e3a8a",
+    "Ratio" = "#64748b"
+  )) +
+  
+  # Customize the line types for each line
+  scale_linetype_manual(values = c(
+    "Teleconsultations with dispensing" = 1,
+    "Teleconsultations" = 1,
+    "Ratio" = 2
+  )) +
+  
+  # Adjust the legend to remove unnecessary symbols
+  guides(linetype = guide_legend(override.aes = list(shape = NA))) +
+  
+  # Set up the y-axis with dual scales (primary and secondary)
+  scale_y_continuous(
+    breaks = seq(0, ymax, 250000),  # Primary axis breaks
+    labels = formatC(seq(0, ymax, 250000), digits = 0, format = "f", big.mark = " "),  # Format for primary axis
+    sec.axis = sec_axis(
+      ~ . / ymax,  # Scale the secondary axis relative to ymax
+      name = "Ratio of the number of teleconsultations \nwith dispensing to the total number of dispensations",
+      labels = c("0%", "25%", "50%", "75%", "100%")  # Labels for the secondary axis
+    ),
+    expand = c(0, 0)
+  ) +
+  
+  # Set the range for the y-axis
+  coord_cartesian(ylim = c(0, ymax)) +
+  
+  # Customize the x-axis with year labels
+  scale_x_date(
+    breaks = seq.Date(as.Date("2015-01-01"), as.Date("2023-01-01"), by = "year"),
+    labels = format.Date(seq.Date(as.Date("2015-01-01"), as.Date("2023-01-01"), by = "year"), "%Y")
+  ) +
+  
+  # Add labels for axes
+  labs(
+    x = "",
+    y = "Number of teleconsultations"
+  ) +
+  
+  # Apply a minimal theme and customize the plot appearance
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(colour = "black", size = 0.3),
+    axis.ticks.x = element_line(colour = "black", size = 0.3),
+    axis.line.y = element_line(colour = "black", size = 0.3),
+    axis.ticks.y = element_line(colour = "black", size = 0.3),
+    legend.position = c(0.25, 0.85),  # Position the legend
+    legend.background = element_rect(fill = "transparent", color = "white")  # Add transparent background for legend
+  )
+
+```
+
+### Spaghetti plot
+
+```{r}
+plotData <- data.frame(
+  ID = 1:50,
+  T1 = rnorm(50, mean = 1, sd = 0.1)
+) %>%
+  mutate(
+    T2 = T1 * rnorm(50, mean = 1.5, sd = 0.1),
+    T3 = T2 * rnorm(50, mean = 1.2, sd = 0.1)
+  ) %>%
+  pivot_longer(
+    cols = T1:T3
+  )
+
+ggplot(plotData, 
+       aes(name, value, group = ID)) + 
+  geom_point(color = '#82354F') + 
+  geom_line(color = '#82354F') +
+  # Add titles and axis labels
+  labs(
+    title = ""
+  ) +
+  ylab("Length (cm)" ) +
+  xlab("Time of measurment") +
+  # Customize the y-axis scale
+  scale_x_discrete(                  # Tick intervals
+    labels = c("Week 1", "Week 2", "Week 3"), # Custom tick labels
+    expand = c(0.1, 0)
+  ) +
+  
+  # Customize the y-axis scale
+  scale_y_continuous(
+    limits = c(0,3),
+    breaks = seq(0, 3, .5), 
+    expand = c(0, 0)
+  ) +
+  # Apply a minimal theme to the plot
+  theme_minimal() +
+  # Customize the legend and x-axis text
+  theme(
+    legend.position = "right",                 # Position the legend on the right
+  )
+```
+
+## Boxplots
+
+### Classic
+
+```{r}
+# Create a data frame for boxplot visualization
+dataBoxplot <- data.frame(
+  med_id = rep(1:8, c(8, 3, 3, 5, 7, 6, 4, 11)),  # Assign medical operator IDs, repeated based on surgery counts
+  op_id = c(1:8, 1:3, 1:3, 1:5, 1:7, 1:6, 1:4, 1:11),  # Assign operation IDs for each surgery
+  setup = pmax(10 - rpois(47, lambda = 4), 1)  # Simulate 'setup' scores, capped at 10 and minimum of 1
+)
+
+# Create a data frame for the line plot (average setup values per operation ID)
+dataLine <- data.frame(
+  op_id = 1:max(dataBoxplot$op_id),  # Sequence of operation IDs
+  setup = as.numeric(by(dataBoxplot$setup, dataBoxplot$op_id, mean))  # Compute mean 'setup' scores by op_id
+)
+
+# Generate the plot using ggplot2
+ggplot(dataBoxplot) +
+  # Add a boxplot layer for setup scores grouped by operation ID
+  geom_boxplot(
+    aes(group = op_id, x = op_id, y = setup)  # Map operation ID and setup scores to boxplot
+  ) +
+  # Add a red line connecting the mean setup values for each operation ID
+  geom_line(
+    data = dataLine,          # Use the data frame with mean setup values
+    aes(op_id, setup),        # Map operation ID to x and mean setup to y
+    color = "red"             # Set line color to red
+  ) +
+  # Add red points for the mean setup values
+  geom_point(
+    data = dataLine,          # Use the data frame with mean setup values
+    aes(op_id, setup),        # Map operation ID to x and mean setup to y
+    color = "red",            # Set point color to red
+    shape = 16                # Use solid circle for points
+  ) +
+  annotate(
+    "text",
+    x = 1:max(dataBoxplot$op_id), y = 10,
+    label = paste0("(n=", table(dataBoxplot$op_id),")")
+  ) +
+  # Add a subtitle with the p-value from a linear model (setup ~ op_id)
+  labs(subtitle = paste0("p=", round(summary(lm(setup ~ op_id, dataBoxplot))$coefficient[2, 4], 4))) +
+  # Label the y-axis
+  ylab("Surgery setup grade (out of 10)") +
+  # Label the x-axis
+  xlab("Number of surgeries") +
+  # Customize the y-axis scale
+  scale_y_continuous(
+    limits = c(0, 10.5),         # Set y-axis limits between 0 and 10
+    breaks = 0:10,             # Add breaks at each integer value
+    expand = c(0, 0)           # Remove padding on the axis
+  ) +
+  # Customize the x-axis scale
+  scale_x_discrete(
+    limits = 1:max(dataBoxplot$op_id),  # Limit x-axis to the range of operation IDs
+    breaks = 1:max(dataBoxplot$op_id)  # Add breaks at each operation ID
+  ) +
+  # Apply a minimal theme for clean visualization
+  theme_minimal()
+
+```
+
+```{r}
+dataBoxplot <- data.frame(
+  y = rnorm(200), 
+  Group = sample(LETTERS[1:3], size = 200, replace = TRUE)
+)
+
+# Box plot by group with jitter
+ggplot(dataBoxplot, aes(x = Group, y = y, colour = Group)) + 
+  geom_boxplot(outlier.shape = NA) + # Box plot without showing outliers
+  geom_jitter(width = 0.2) +         # Add jittered points for individual observations
+  theme_minimal() +                  # Use a minimal theme for clean visualization
+  xlab("Group") +                    # X-axis label
+  ylab("Some randomly generated values") # Y-axis label
+```
+
+```{r}
+# Simulate data for a boxplot
+dataBoxplot <- data.frame(
+  id = rep(1:47, 5),  # 47 subjects, repeated 5 times for each group
+  times = rep(paste0("Month ", c(0, 3, 6, 9, 12)), each = 47),  # 5 time points
+  val = c(  # Simulate values for each time point with different means and SDs
+    rnorm(n = 47, mean = 2, sd = 1),  # Group 1 (mean=2, sd=1)
+    rnorm(n = 47, mean = 5, sd = 1),  # Group 2 (mean=5, sd=1)
+    rnorm(n = 47, mean = 5, sd = 2),  # Group 3 (mean=5, sd=2)
+    rnorm(n = 47, mean = 8, sd = 2),  # Group 4 (mean=8, sd=2)
+    rnorm(n = 47, mean = 8, sd = 5)   # Group 5 (mean=8, sd=5)
+  )
+)
+dataBoxplot$val <- pmax(0, dataBoxplot$val)
+
+# Perform ANOVA to test differences between the groups
+res.aov <- anova_test(
+  data = dataBoxplot,
+  dv = val,     # Dependent variable: val (size)
+  wid = id,     # Within-subjects factor: id
+  between = times  # Between-subjects factor: times
+)
+
+# Pairwise t-tests to compare each group with group 1, adjusting for multiple comparisons using Bonferroni correction
+pwc <- dataBoxplot %>%
+  pairwise_t_test(
+    val ~ times,  # Dependent variable 'val' across levels of 'times'
+    paired = TRUE,  # Paired samples
+    ref.group = "Month 0",  # Use "n°1" as the reference group
+    p.adjust.method = "bonferroni"  # Apply Bonferroni correction to p-values
+  ) %>%
+  add_xy_position(x = "times")  # Add xy-position for displaying p-values
+
+# Create the boxplot with individual data points and p-values
+ggboxplot(
+  dataBoxplot,  # Data for the boxplot
+  x = "times",  # Group by 'times'
+  y = "val",    # Plot 'val' (size) on the y-axis
+  add = "point",  # Add individual data points to the boxplot
+  ylab = "Size",  # Label for the y-axis
+  xlab = ""      # No label for the x-axis
+) +
+  scale_y_continuous(
+    limits = c(0, 25),
+    expand = c(0, 0)
+  ) +
+  stat_pvalue_manual(pwc) +  # Add p-values from pairwise t-tests
+  labs(
+    subtitle = get_test_label(res.aov, detailed = FALSE),  # Subtitle for ANOVA result
+    caption = "2 by 2 testing: Student's t-test, p-value adjustment: Bonferroni"  # Caption explaining test details
+  )
+
+```
+
+```{r}
+dataBoxplot <- data.frame(
+  TIME = factor(
+      rep(rep(c("T0", "T3", "T6", "T9", "T12", "T15", "T18", "T24"), each = 100), 2),
+      levels = c("T0", "T3", "T6", "T9", "T12", "T15", "T18", "T24")),
+  Score = c(rnorm(100, 10, 1), rnorm(100, 12, 2), rnorm(100, 13, 2), rnorm(100, 13, 1),
+            rnorm(100, 14, 2), rnorm(100, 15, 1), rnorm(100, 17, 1), rnorm(100, 18, 3),
+            rnorm(100, 10, 3), rnorm(100, 11, 1), rnorm(100, 11, 2), rnorm(100, 12, 1),
+            rnorm(100, 14, 1), rnorm(100, 16, 3), rnorm(100, 15, 1), rnorm(100, 15, 4)),
+  Cohort = factor(rep(c("First Group", "Second Group"), each = 8*100),
+                  c("First Group", "Second Group"))
+)
+
+ggplot(dataBoxplot) +
+  # Add a boxplot layer for setup scores grouped by operation ID
+  geom_boxplot(
+    aes(group = interaction(TIME, Cohort), 
+        x = TIME, 
+        y = Score, 
+        colour = Cohort),  
+    position = position_dodge()
+     ) +
+  annotate(
+    "text",
+    x = 1:nlevels(dataBoxplot$TIME)-.2, y = 27.5,
+    label = paste0("n=", table(dataBoxplot$TIME[dataBoxplot$Cohort=="Second Group"])),
+    angle = 65, hjust = 0
+  ) +
+  annotate(
+    "text",
+    x = 1:nlevels(dataBoxplot$TIME)+.2, y = 27.5,
+    label = paste0("n=", table(dataBoxplot$TIME[dataBoxplot$Cohort=="First Group"])),
+    angle = 65, hjust = 0
+  ) +
+  ylab("Score value") +
+  # Label the x-axis
+  xlab("Time (in months)") +
+  # Customize the y-axis scale
+  scale_y_continuous(
+    limits = c(0, 40),         # Set y-axis limits between 0 and 10
+    breaks = seq(0, 30, by = 5),             # Add breaks at each integer value
+    expand = c(0, 0)           # Remove padding on the axis
+  ) +
+  # Customize the x-axis scale
+  scale_x_discrete(
+    labels = c("T0", "T3", "T6", "T9", "T12", "T15", "T18", "T24")
+  ) + 
+  scale_color_manual(
+    values = c("First Group" = "#005263", "Second Group" = "#E64E2B")
+  ) +
+  # Apply a minimal theme for clean visualization
+  theme_minimal()
+```
+
+### Violins
+
+```{r}
+ggstatsplot::ggbetweenstats(ISLR::Wage, education, wage, "np") +
+  ylab("Workers raw wage") +
+  xlab("Education level")
+```
+
+### With histogram
+
+```{r}
+plotData <- data.frame(
+  val = rpois(100, 5)
+)
+
+p1 <- ggplot(plotData) +
+  # Add a boxplot layer for setup scores grouped by operation ID
+  geom_histogram(
+    aes(x = val),# Map operation ID and setup scores to boxplot
+    fill = "white",
+    color = "black",
+    closed = "left",
+    binwidth = 1
+    ) +
+  # Label the x-axis
+  xlab("") +
+  ylab("") +
+  # Customize the y-axis scale
+  scale_x_continuous(
+    limits = c(0, 15),         # Set y-axis limits between 0 and 10
+    breaks = 0:15,             # Add breaks at each integer value
+    expand = c(0, 0)# Remove padding on the axis
+  ) +
+  # Apply a minimal theme for clean visualization
+  theme_minimal() +
+  theme(
+    title = element_text(vjust = 0),
+    panel.grid.minor = element_blank(),
+    axis.ticks.x = element_line(size = .5),
+    axis.text.x = element_blank(),
+        plot.margin=unit(c(1,1,-0.5,1), "cm")
+  )
+
+p2 <- ggplot(plotData) +
+  # Add a boxplot layer for setup scores grouped by operation ID
+  geom_boxplot(
+    aes(x = val)  # Map operation ID and setup scores to boxplot
+  ) +
+  # Label the x-axis
+  xlab("") +
+  ylab("") +
+  # Customize the y-axis scale
+  scale_x_continuous(
+    limits = c(0, 15),         # Set y-axis limits between 0 and 10
+    breaks = 0:15,             # Add breaks at each integer value
+    expand = c(0, 0) ,
+    position = "top" # Remove padding on the axis
+  ) +
+  scale_y_continuous(
+    breaks = 0,
+    labels = 10
+  ) +
+  # Apply a minimal theme for clean visualization
+  theme_minimal() +
+  theme(
+    axis.line.y = element_line(color = "white"),
+    axis.ticks.y = element_line(color = "white"),
+    axis.text.y = element_text(color = "white"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    
+    axis.line.x = element_line(size = .5),
+    axis.ticks.x = element_line(size = .5),
+    axis.text.x = element_text(size = 12),
+    plot.margin=unit(c(-0.5,1,1,1), "cm")
+  )
+
+gridExtra::grid.arrange(p1, p2)
+
+```
+
+## Scatter plots
+
+### 2D
+
+```{r}
+# Prepare the data
+dataScatter <- iris %>%
+  mutate(
+    # Assign colors to each species using hex color codes
+    p_col = ifelse(Species == "setosa", "#EB5E55", 
+                   ifelse(Species == "versicolor", "#C6D8D3", "#9984D4"))
+  )
+
+# Create a scatterplot using ggplot2
+ggplot(dataScatter) +
+  geom_point(
+    aes(
+      x = Sepal.Length,  # Map Sepal.Length to the x-axis
+      y = Sepal.Width,   # Map Sepal.Width to the y-axis
+      col = Species      # Color points based on the Species column
+    ),
+    size = 4             # Set the size of the points
+  ) + 
+  scale_x_continuous(
+    limits = c(3.8, 8),   # Set limits for the x-axis
+    breaks = 0:10,        # Define the breaks (tick marks) on the x-axis
+    expand = c(0, 0)      # Remove extra padding around the x-axis limits
+  ) + 
+  scale_y_continuous(
+    limits = c(1.8, 5),   # Set limits for the y-axis
+    breaks = 0:5,         # Define the breaks (tick marks) on the y-axis
+    expand = c(0, 0)      # Remove extra padding around the y-axis limits
+  ) +
+  scale_colour_manual(
+    values = c("#EB5E55", "#C6D8D3", "#9984D4")  # Define custom colors for Species
+  ) +
+  theme_classic() +        # Apply a classic theme (minimal grid lines, clean appearance)
+  xlab("Length (mm)") +    # Set the x-axis label
+  ylab("Width (mm)") +     # Set the y-axis label
+  labs(subtitle = "Sepal caracteristics per specie")  # Add a subtitle to the plot
+
+```
+
+### 3D
+
+```{r}
+# Prepare the data
+dataScatter <- iris %>%
+  mutate(
+    # Assign colors to each species using hex color codes
+    p_col = ifelse(Species == "setosa", "#EB5E55", 
+                   ifelse(Species == "versicolor", "#C6D8D3", "#9984D4"))
+  )
+
+# Initialize the 3D scatter plot
+p <- plot_ly() %>%
+  add_trace(
+    data = dataScatter, # Use the prepared dataset
+    type = "scatter3d", # Create a 3D scatter plot
+    mode = "markers", # Display only markers (points)
+    x = ~Sepal.Length, # Map Sepal Length to the x-axis
+    y = ~Sepal.Width,  # Map Sepal Width to the y-axis
+    z = ~Petal.Length, # Map Petal Length to the z-axis
+    color = ~Species,  # Use Species as a grouping variable for the legend
+    marker = list(size = 5, color = ~p_col) # Set marker size and color based on p_col
+  ) %>%
+  layout(
+    # Configure 3D axis titles
+    scene = list(
+      xaxis = list(title = 'Sepal length'),
+      yaxis = list(title = 'Sepal width'),
+      zaxis = list(title = 'Petal length')
+    ),
+    # Add annotations (e.g., legend title) to the plot
+    annotations = list(
+      x = 1.13,  # x-coordinate for the annotation
+      y = 1.05,  # y-coordinate for the annotation
+      text = 'Species', # Annotation text
+      showarrow = FALSE # Hide any arrow for the annotation
+    )
+  )
+
+# Add lines anchoring points to the XY plane
+for (i in 1:nrow(dataScatter)) {
+  p <- p %>%
+    add_trace(
+      type = "scatter3d", # Add 3D scatter traces for lines
+      mode = "lines", # Render as lines
+      x = c(dataScatter[i, 1], dataScatter[i, 1]), # x-coordinates for the line (constant)
+      y = c(dataScatter[i, 2], dataScatter[i, 2]), # y-coordinates for the line (constant)
+      z = c(dataScatter[i, 3], min(dataScatter[, 3])), # z-coordinates: from point to minimum z-value
+      line = list(
+        # Dynamically generate RGBA color from p_col for line transparency
+        color = sprintf("rgba(%d, %d, %d, %.2f)", 
+          grDevices::col2rgb(dataScatter$p_col[i])[1], # Red component
+          grDevices::col2rgb(dataScatter$p_col[i])[2], # Green component
+          grDevices::col2rgb(dataScatter$p_col[i])[3], # Blue component
+          0.8) # Transparency (alpha)
+      ),
+      showlegend = FALSE # Exclude lines from the legend
+    )
+}
+
+# Display the final plot
+p
+
+```
+
+## Radar plots
+
+```{r}
+dataRadarTemp <- data.frame(
+  TIME = rep(c("T0", "T3", "T6", "T9"), each = 100),
+  MO = c(runif(100, 1, 3), runif(100, 2, 5), runif(100, 1, 4), runif(100, 0, 2)),
+  SC = c(runif(100, 1, 4), runif(100, 0, 3), runif(100, 2, 5), runif(100, 2, 2.1)),
+  UA = c(runif(100, 2, 4), runif(100, 4, 5), runif(100, 4, 5), runif(100, 4, 5)),
+  PA = c(runif(100, 2, 2.5), runif(100, 3, 4), runif(100, 3, 5), runif(100, 4, 5)),
+  AD = c(runif(100, 1, 3), runif(100, 1, 3), runif(100, 1, 3), runif(100, 1, 3))
+) %>%
+  mutate(
+    TIME = factor(
+      TIME,
+      levels = c("T0", "T3", "T6", "T9"),
+      labels = c("T0", "T3", "T6", "T9")
+    )
+  )
+
+# Average by dimension and time point
+dataRadar <- data.frame(
+  MO = by(dataRadarTemp$MO, dataRadarTemp$TIME, mean),
+  SC = by(dataRadarTemp$SC, dataRadarTemp$TIME, mean),
+  UA = by(dataRadarTemp$UA, dataRadarTemp$TIME, mean),
+  PA = by(dataRadarTemp$PA, dataRadarTemp$TIME, mean),
+  AD = by(dataRadarTemp$AD, dataRadarTemp$TIME, mean)
+)
+
+# Adding a first line with the max and a second line with the min
+# Mandatory to use the function
+dataRadar <- rbind(rep(5,5), rep(0,5) , dataRadar)
+
+
+# Color vector
+# Converting colors in rgb, with alpha for trasnparency
+alpha1 <- 1*255
+alpha2 <- 0*255
+colors_border <- c(rgb(0, 82, 99, alpha1, maxColorValue = 255),
+                  rgb(125,175,140, alpha1, maxColorValue = 255),
+                  rgb(152,202,139, alpha1, maxColorValue = 255),
+                  rgb(193,229,227, alpha1, maxColorValue = 255))
+colors_in <- c(rgb(0, 82, 99, alpha2, maxColorValue = 255),
+                rgb(125,175,140, alpha2, maxColorValue = 255),
+                rgb(152,202,139, alpha2, maxColorValue = 255),
+               rgb(193,229,227, alpha2, maxColorValue = 255))
+
+
+dataRadar[2, ] <- rep(0,5)
+
+fmsb::radarchart(
+  dataRadar,
+  axistype = 1,
+  #custom polygon
+  pcol = colors_border ,
+  pfcol = colors_in ,
+  plwd = 4 ,
+  plty = 1,
+  #custom the grid
+  cglcol = "grey",
+  cglty = 1,
+  axislabcol = "grey",
+  caxislabels = seq(3, 5, .5),
+  cglwd = 0.8,
+  #custom labels
+  vlcex = 0.8,
+  vlabels = c("Mobility", "Selfcare", "Usual\nActivity", "Pain", "Anxiety\nDepression")
+)
+```
+
+## Pie charts
+
+```{r}
+# Create data for the pie chart
+dataPie <- iris$Species  # Extract the species column from the iris dataset
+group <- names(sort(table(dataPie), decreasing = TRUE))  # Get species names sorted by frequency
+val <- round(sort(table(dataPie), decreasing = TRUE) / length(dataPie) * 100, 0)  # Calculate percentages for each species
+
+# Create the pie chart using ggplot2
+ggplot(mapping = aes(x = "", y = val, fill = group)) +
+    # Add bars to represent proportions
+    geom_bar(stat = "identity", width = 1) +
+    # Add percentage labels on the chart
+    geom_text(
+        aes(label = ifelse(val > 5, paste0(val, "%"), "")),  # Display labels only for slices > 5%
+        position = position_stack(vjust = 0.5)  # Center the text within each segment
+    ) +
+    # Convert the bar chart to a polar coordinate system to create a pie chart
+    coord_polar("y", start = 0) +
+    # Set the color palette for the pie chart segments
+    scale_fill_brewer(palette = "Pastel1") +
+    # Customize the legend
+    guides(fill = guide_legend(title = "Specie")) +
+    # Remove all axis elements for a clean look
+    theme_void()
+
+```
+
+# Regressions
+
+## Survival curves
+
+### ggplot2::autoplot
+
+```{r}
+# Simulate survival data
+n <- 1000  # Number of individuals
+dataSurvCurve <- data.frame(
+  id = 1:n,  # Unique identifier for each individual
+  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time (1 to 365 days)
+  event = factor(c(
+    sample(0:1, n/2, prob = c(0.4, 0.6), replace = TRUE),  # Events for the unexposed group
+    sample(0:1, n/2, prob = c(0.7, 0.3), replace = TRUE)   # Events for the exposed group
+  )),  # Event status as a factor: 0 = censored, 1 = event
+  exposure = rep(c("Unexposed", "Exposed"), each = n/2)  # Exposure groups
+)
+
+# Adjust time for censored observations (event == 0)
+dataSurvCurve$time[dataSurvCurve$event == 0] <- 365
+
+# Fit the survival model with event stratified by exposure
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve)
+
+# Define the upper limit of the y-axis in percentage
+ymax <- 30
+
+# Plot survival curves using autoplot from the ggplot2 framework
+ggplot2::autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +  # Start with a blank base plot
+  geom_step(aes(linetype = strata, color = event), size = 0.8) +  # Add step lines by strata and event
+  scale_linetype_manual(
+    name = "Group",                     # Legend title for group
+    values = c('dotted', 'solid'),      # Line types for the groups
+    labels = c('Non-exposed', 'Exposed') # Labels for the groups
+  ) +
+  scale_color_manual(
+    name = "Event",                     # Legend title for events
+    values = c("white", "#1C4073"),     # Colors for censored and events
+    labels = c(' ', "Hospitalised")     # Labels for the events
+  ) +
+  labs(
+    x = "Follow up period (days)",      # X-axis label (French: Follow-up period in days)
+    y = "Proportion of population",     # Y-axis label
+    title = ""                          # Empty title
+  ) +
+  geom_vline(aes(xintercept = 0), size = 1) +  # Add vertical line at x = 0
+  geom_hline(aes(yintercept = 1 - ymax / 100), size = 1) +  # Add horizontal line for the ymax threshold
+  scale_y_reverse(
+    limits = 1 - c(ymax / 100, 1),      # Reverse y-axis to represent decreasing survival
+    breaks = 1 - seq(ymax / 100, 1, 0.1), # Break points for y-axis
+    labels = paste0(seq(ymax, 100, 10), "%"), # Labels as percentages
+    expand = c(0, 0)                    # No expansion around the limits
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 360, 60),           # X-axis breaks every 60 days
+    expand = c(0, 0)                    # No expansion around the limits
+  ) +
+  theme_minimal() +                      # Use a minimal theme
+  theme(
+    plot.title = element_text(hjust = 0.5),                        # Center align the title
+    axis.title.x = element_text(face = "bold", colour = "black", size = 12), # Style x-axis title
+    axis.title.y = element_text(face = "bold", colour = "black", size = 12), # Style y-axis title
+    legend.title = element_text(face = "bold", size = 10),         # Style legend title
+    panel.grid.major.y = element_line(colour = "lightgray", size = 0.3), # Grid for y-axis
+    panel.grid.minor.x = element_blank(),                          # Remove minor grid for x-axis
+    legend.position = c(0.15, 0.30),                               # Position legend inside plot
+    legend.background = element_rect(fill = "transparent", color = "white") # Transparent background for legend
+  )
+
+```
+
+```{r}
+# Simulating survival data
+n <- 1000  # Number of individuals
+dataSurvCurve <- data.frame(
+  id = 1:n,
+  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
+  event = factor(c(sample(0:2, n/2, prob = c(0.4, 0.4, 0.2), replace = TRUE),
+                   sample(0:2, n/2, prob = c(0.2, 0.3, 0.5), replace = TRUE))),  # Event (0 = censored, 1 = sick, 2 = dead)
+  exposure = rep(c("Unexposed", "Exposed"), each = n/2)  # Exposure status (Unexposed or Exposed)
+)
+
+dataSurvCurve$time[dataSurvCurve$event == 0] <- 365  # Set time to 365 for censored observations (event == 0)
+
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve) # Fitting a Survival Model
+
+
+# Plot a survival curve with `autoplot` and enhance it with additional layers
+ggplot2::autoplot(fit, surv.linetype = 'blank', surv.colour = NA) + 
+  # Add step lines representing survival curves
+  geom_step(
+    aes(linetype = strata, color = event), # Map line type to `strata` and color to `event`
+    size = 0.8                             # Set line thickness
+  ) +
+  # Customize the line types for survival curves
+  scale_linetype_manual(
+    name = "Group",                         # Title for the legend
+    values = c('dashed', 'solid'),          # Define line types: dashed for unexposed, solid for exposed
+    labels = c('Unexposed', 'Exposed')      # Labels for the legend
+  ) +
+  # Customize the colors for the event states
+  scale_color_manual(
+    name = "State",                         # Title for the legend
+    values = c("#AAC0AF", "#1C4073", "#B28B84"), # Colors for Healthy, Sick, and Dead states
+    labels = c('Healthy', 'Sick', 'Dead')   # Labels for the legend
+  ) +
+  # Add axis labels and a title
+  labs(
+    x = "Followup period (days)",           # X-axis label
+    y = "Proportion of the population",     # Y-axis label
+    title = ""                              # Title (empty for now)
+  ) +
+  # Add a vertical reference line at x = 0
+  geom_vline(
+    aes(xintercept = 0), # Position of the line
+    size = 1             # Thickness of the line
+  ) +
+  # Customize the y-axis scale
+  scale_y_continuous(
+    limits = c(0, 1),                      # Set the y-axis range from 0 to 1
+    breaks = seq(0, 1, 0.1),               # Major ticks every 0.1
+    labels = paste0(seq(0, 100, 10), "%"), # Convert tick labels to percentages
+    expand = c(0, 0)                       # Remove padding on the y-axis
+  ) +
+  # Customize the x-axis scale
+  scale_x_continuous(
+    breaks = seq(0, 360, 60),              # Major ticks every 60 days
+    expand = c(0, 0)                       # Remove padding on the x-axis
+  ) +
+  # Apply a minimal theme for a clean appearance
+  theme_minimal() +
+  # Customize specific theme elements
+  theme(
+    plot.title = element_text(hjust = 0.5),          # Center-align the plot title
+    axis.title.x = element_text(
+      face = "bold",                                 # Make x-axis title bold
+      colour = "black",                              # Set title color to black
+      size = 12                                      # Set font size
+    ),
+    axis.title.y = element_text(
+      face = "bold",                                 # Make y-axis title bold
+      colour = "black",                              # Set title color to black
+      size = 12                                      # Set font size
+    ),
+    legend.title = element_text(face = "bold", size = 10), # Style legend titles
+    panel.grid.major.y = element_line(
+      colour = "lightgray",                          # Light gray major grid lines on the y-axis
+      size = 0.3                                     # Set line thickness
+    ),
+    panel.grid.minor.x = element_blank()             # Remove minor grid lines on the x-axis
+  )
+```
+
+### ggsurvfit::ggsurvfit
+
+```{r}
+data <- data.frame(
+  time = c(rnorm(90, 180, 60),rnorm(90, 130, 60)),
+  event = rbinom(180, 0:1, 0.7),
+  group = rep(c("MONO", "COMBO"), each = 90)
+)
+
+
+get_median_time <- function(dataSurv, lab) {
+  data <- dataSurv[dataSurv$group == lab,]
+  as.numeric(surv_median(surv_fit(
+    Surv(time = time, event = event) ~ 1, 
+    data = data
+  ))[2])
+}
+median1 <- get_median_time(data, "MONO")
+median2 <- get_median_time(data, "COMBO")
+
+ggsurvfit::survfit2(
+    Surv(time = time, event = event) ~ group, 
+    data = data
+  ) %>%
+    ggsurvfit::ggsurvfit() +
+    add_censor_mark() +
+    add_confidence_interval() +
+    scale_ggsurvfit(
+      x_scales = list(
+        limits = c(0, 365),
+        breaks = seq(0, 365, 30)
+      ),
+      y_scales = list(
+        expand = c(0,0)
+      )
+    ) +
+    add_risktable(
+      times = NULL,
+      risktable_stats = c("n.risk"),
+      risktable_group = c("auto", "strata", "risktable_stats"),
+      risktable_height = NULL,
+      stats_label = NULL,
+      combine_groups = FALSE,
+      theme = theme_risktable_default(),
+      size = 3.5
+    ) +
+    annotate("segment", 
+             x = 0, xend = median1, 
+             y = .5, yend = .5, 
+             colour = "gray70", lty = 2) +
+    annotate("segment", 
+           x = 0, xend = median2, 
+            y = .5, yend = .5, 
+            colour = "gray70", lty = 2) +
+    annotate("segment", 
+             x = median1, xend = median1, 
+             y = .5, yend = 0, 
+             colour = "gray70", lty = 2) +
+    annotate("segment", 
+             x = median2, xend = median2, 
+             y = .5, yend = 0, 
+             colour = "gray70", lty = 2) +
+    labs(
+      x = "Time in days",
+      y = "Probability of suvival"
+    )
+```
+
+
+### survminer::ggsurvplot
+
+```{r}
+# Simulate survival data for analysis
+n <- 1000  # Number of individuals
+dataSurvCurve <- data.frame(
+  id = 1:n,  # Unique identifier for each individual
+  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
+  event = c(
+    sample(0:1, n/2, prob = c(0.4, 0.6), replace = TRUE),  # First group: 40% censored, 60% events
+    sample(0:1, n/2, prob = c(0.7, 0.3), replace = TRUE)   # Second group: 70% censored, 30% events
+  ), 
+  # Event status: 0 = censored, 1 = event occurred
+  exposure = rep(c("Unexposed", "Exposed"), each = n/2)  # Exposure status: "Unexposed" or "Exposed"
+)
+
+# Fit survival curves stratified by exposure
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve)
+
+# Plot the survival curves using ggsurvplot
+survminer::ggsurvplot(
+  fit,                          # Survival fit object
+  data = dataSurvCurve,         # Data source
+  legend.title = "Group",       # Title for the legend
+  legend.labs = c("Exposed", "Unexposed"),  # Labels for legend groups
+  conf.int = TRUE,              # Display confidence intervals
+  censor = FALSE,               # Do not display censoring marks
+  xlab = "Follow up time (days)",  # Label for x-axis
+  ylab = "Non-hospitalisation probability", # Label for y-axis
+  break.time.by = 60,           # Breaks on the x-axis every 60 days
+  surv.scale = "percent",       # Scale survival probability as percentages
+  ylim = c(0, 1),               # Set y-axis limits (0% to 100%)
+  axes.offset = FALSE,          # Align axes at the origin
+  legend = c(0.12, 0.15)        # Position the legend within the plot
+)
+
+```
+
+
+
+```{r}
+# Create a data frame for survival analysis
+dataSurvCurve <- data.frame(
+  os.time = colon$time,          # Overall survival time from 'colon' dataset
+  os.status = colon$status,      # Overall survival event status (1 = event, 0 = censored)
+  pfs.time = sample(colon$time), # Progression-free survival time, randomized for illustration
+  pfs.status = colon$status,     # Progression-free survival event status (1 = event, 0 = censored)
+  sex = colon$sex,               # Patient sex
+  rx = colon$rx,                 # Treatment type
+  adhere = colon$adhere          # Adherence to treatment
+)
+
+# Fit survival curves for progression-free survival (PFS) by treatment type
+fit.pfs <- survfit(Surv(pfs.time, pfs.status) ~ rx, data = dataSurvCurve)
+
+# Fit survival curves for overall survival (OS) by treatment type
+fit.os <- survfit(Surv(os.time, os.status) ~ rx, data = dataSurvCurve)
+
+# Combine the survival fits into a list for plotting
+fits <- list(PFS = fit.pfs, OS = fit.os)
+
+# Plot the survival curves using ggsurvplot
+survminer::ggsurvplot(
+  fits,                          # List of survival fits (PFS and OS)
+  data = dataSurvCurve,          # Data used for plotting
+  combine = TRUE,                # Combine PFS and OS plots into one
+  censor = FALSE,                # Do not display censoring marks
+  palette = "jco",               # Use JCO color palette
+  surv.scale = "percent",        # Display survival probabilities as percentages
+  ylim = c(0, 1),                # Set y-axis limits (0% to 100% survival)
+  axes.offset = FALSE,           # Align axes at the origin
+  legend = "right",              # Position the legend on the right
+  xlab = "Survival time (years)",# Label for x-axis
+  xscale = "d_y",                # Scale x-axis from days to years
+  break.x.by = 365.25,           # Breaks on the x-axis every year
+  legend.title = "Treatment type" # Title for the legend
+)
+
+```
+
+```{r}
+fit <- survfit( Surv(time, status) ~ sex, data = colon)
+
+survminer::ggsurvplot_facet(fit, colon, facet.by = "rx",
+                palette = "jco",                # Combine PFS and OS plots into one
+  censor = FALSE,                 # Use JCO color palette
+  surv.scale = "percent",        # Display survival probabilities as percentages
+  ylim = c(0.3, 1),                # Set y-axis limits (0% to 100% survival)
+  axes.offset = FALSE,           # Align axes at the origin
+  legend = c("PFS", "OS"),              # Position the legend on the right
+  xlab = "Survival time (years)",# Label for x-axis
+  xscale = "d_y",                # Scale x-axis from days to years
+  break.x.by = 365.25,           # Breaks on the x-axis every year
+  legend.title = "Treatment type", # Title for the legend)
+  conf.int = TRUE
+)
+```
+
+## Forest plots
+
+```{r}
+# Create the data frame for the forest plot
+dataForest <- data.frame(
+  var = c("Age", "Age", "Age", "Age", "Sex", "Sex", "Diabetes", "Diabetes", "Smoker", "Smoker"), # Variables
+  mod = c("18-24", "25-44", "45-64", "64+", "Male", "Female", "No", "Yes", "No", "Yes"), # Categories or modalities within variables
+  estimate = c(NA, 1.05, 1.38, 1.72, NA, 0.87, NA, 2.48, NA, 0.97), # Point estimates (Odds Ratios)
+  conf.low = c(NA, 0.92, 1.21, 1.44, NA, 0.72, NA, 2.13, NA, 0.88), # Lower bounds of confidence intervals
+  conf.high = c(NA, 1.22, 1.63, 1.87, NA, 1.01, NA, 2.67, NA, 1.05) # Upper bounds of confidence intervals
+) %>% 
+  mutate(
+    id = 1:10, # Assign a unique ID to each row
+    label = ifelse(is.na(estimate), "Ref", 
+                   paste0(formatC(estimate, 2, format = "f"), " [",
+                          formatC(conf.low, 2, format = "f"), "-", 
+                          formatC(conf.high, 2, format = "f"), "]")), 
+    # Create labels for display: "estimate [conf.low-conf.high]" or "Ref" if missing
+    estimate = ifelse(is.na(estimate), 1, estimate), # Replace missing estimates with 1 (reference)
+    conf.low = ifelse(is.na(conf.low), 1, conf.low), # Replace missing lower bounds with 1 (reference)
+    conf.high = ifelse(is.na(conf.high), 1, conf.high), # Replace missing upper bounds with 1 (reference)
+    signif = ifelse(conf.low <= 1 & conf.high >= 1, "p>0.05", "p<0.05") 
+    # Determine significance: overlaps 1 (p>0.05) or not (p<0.05)
+  )
+
+# Create the forest plot using ggplot2
+ggplot(dataForest) + 
+  geom_vline(
+    xintercept = 1, # Reference line at Odds Ratio = 1
+    color = "gray25", 
+    linetype = 2 # Dashed line
+  ) + 
+  geom_vline(
+    xintercept = c(0.25, 0.5, 2, 4), # Additional vertical lines for log-scale guidance
+    color = "gray75",
+    linetype = "dotted"
+  ) +
+  geom_errorbar(
+    aes(
+      y = reorder(mod, -id), # Reorder y-axis labels based on ID
+      xmin = conf.low, # Lower bound of the confidence interval
+      xmax = conf.high # Upper bound of the confidence interval
+    ),
+    position = position_dodge(0.5), # Adjust error bar position
+    width = 0.4, # Width of the error bars
+    size = 0.8 # Thickness of the error bars
+  ) + 
+  geom_point(
+    aes(x = estimate, y = reorder(mod, -id), color = signif), # Add points for the estimates
+    position = position_dodge(width = 0.5), # Adjust point position
+    size = 2.5 # Size of the points
+  ) + 
+  scale_x_log10( # Use a logarithmic scale for x-axis
+    breaks = c(0.5, 1, 2, 4), # Specify tick marks
+    limits = c(0.49, 6) # Set x-axis limits
+  ) +
+  scale_color_manual(
+    name = "Significance", # Legend title for significance
+    values = c("red", "black") # Colors for significant and non-significant points
+  ) +
+  facet_grid(
+    rows = vars(var), # Create separate panels for each variable
+    scales = "free", # Allow scales to adjust freely per panel
+    switch = "both" # Switch facet labels to both sides
+  ) +
+  xlab("Odds ratio") + # Label for the x-axis
+  ylab("") + # Remove y-axis label
+  theme_classic() + # Use a clean, minimal theme
+  theme(panel.grid.major.y = element_line(colour = "lightgray")) + # Add gridlines for readability
+  geom_text(
+    aes(x = 5, y = reorder(mod, -id), label = dataForest$label), # Add text labels for estimates
+  )
+```
+
+```{r}
+# Create the data frame for the forest plot
+dataForest <- data.frame(
+  var = factor(c(rep("Période 1", 7), rep("Socio-démo", 8), 
+          rep("ATCD addictions", 3), 
+          rep("ATCD TTT", 2),
+          rep("Comorbidités", 9)),
+          levels = c("Période 1", "Socio-démo", "ATCD addictions", "ATCD TTT", "Comorbidités")), # Variables
+  mod = c("Baclofène", "Acamprosate", "Asso (non Disul)", "Asso Disul", "Disulfirame", "Nalmefène", "Naltrexone",
+          "Sexe : Femme", "Age", "CMU/ACS", paste0("FDep : Quintile n°", 1:5), 
+          "Hospitalisation", "Pathologie grave", "Nb jours d'hospit.",
+          "Ttt psychiatrique", "Ttt sub. opioïdes",
+          "Troubles addictifs", "Maladies coronaires", "Insuf. cardiaque",
+          "Diabète", "Cancer", "Troubles psy enfance", "Autres troubles psy", 
+          "Mal. respiratoires", "Mal. foie/pancréas"), # Categories or modalities within variables
+  estimate = c(NA, 0.98, 1.38, 1.33, 1.35, 1.27, 0.99, 1.19, 0.98, 1.07, NA, 
+               1.02, 1.02, 1.01, 1.11, 0.79, 0.95, 1.00, 0.66, 0.92, 0.71, 1.00, 0.99, 0.89,
+               1.12, 0.76, 0.75, 0.92, 0.95), # Point estimates (Odds Ratios)
+  conf.low = c(NA, 0.94, 1.27, 1.32, 1.30, 1.25, 0.97, 1.18, 0.98, 1.06, NA,
+               1.00, 1.00, 0.99, 1.09, 0.78, 0.92, 1.00, 0.65, 0.90, 0.69, 0.96,
+               0.91, 0.86, 1.08, 0.69, 0.73, 0.90, 0.93), # Lower bounds of confidence intervals
+  conf.high = c(NA, 1.02, 1.50, 1.35, 1.40, 1.29, 1.01, 1.21, 0.98, 1.09, NA, 
+                1.04, 1.03, 1.03, 1.13, 0.81, 0.99, 1.00, 0.67, 0.95, 0.72, 
+                1.04, 1.08, 0.91, 1.16, 0.84, 0.76, 0.94, 0.98)# Upper bounds of confidence intervals
+) %>% 
+  mutate(
+    id = 1:29, # Assign a unique ID to each row
+    label = ifelse(is.na(estimate), "Ref", 
+                   paste0(formatC(estimate, 2, format = "f"), " [",
+                          formatC(conf.low, 2, format = "f"), "-", 
+                          formatC(conf.high, 2, format = "f"), "]")), 
+    # Create labels for display: "estimate [conf.low-conf.high]" or "Ref" if missing
+    estimate = ifelse(is.na(estimate), 1, estimate), # Replace missing estimates with 1 (reference)
+    conf.low = ifelse(is.na(conf.low), 1, conf.low), # Replace missing lower bounds with 1 (reference)
+    conf.high = ifelse(is.na(conf.high), 1, conf.high), # Replace missing upper bounds with 1 (reference)
+    signif = ifelse(conf.low <= 1 & conf.high >= 1, "p>0.05", "p<0.05") 
+    # Determine significance: overlaps 1 (p>0.05) or not (p<0.05)
+  )
+
+
+ # Create the forest plot using ggplot2
+  ggplot(dataForest) + 
+    geom_vline(
+      xintercept = 1, # Reference line at Odds Ratio = 1
+      color = "gray25", 
+      linetype = 2 # Dashed line
+    ) + 
+    geom_vline(
+      xintercept = c(0.5, 0.65, 0.8, 1.25, 1.5), # Additional vertical lines for log-scale guidance
+      color = "gray75",
+      linetype = "dotted"
+    ) +
+    geom_errorbar(
+      aes(
+        y = reorder(mod, -id), # Reorder y-axis labels based on ID
+        xmin = conf.low, # Lower bound of the confidence interval
+        xmax = conf.high # Upper bound of the confidence interval
+      ),
+      position = position_dodge(0.5), # Adjust error bar position
+      width = 0.4, # Width of the error bars
+      size = 0.8 # Thickness of the error bars
+    ) + 
+    geom_point(
+      aes(x = estimate, y = reorder(mod, -id)), # Add points for the estimates
+      position = position_dodge(width = 0.5), # Adjust point position
+      size = 2.5 # Size of the points
+    ) + 
+    scale_x_log10( # Use a logarithmic scale for x-axis
+      breaks = c(0.5, 0.65, 0.8, 1, 1.25, 1.5, 2), # Specify tick marks
+      limits = c(0.6, 2), # Set x-axis limits
+      expand = c(0, 0)
+    ) +
+    # scale_color_manual(
+    #   name = "Significativité", # Legend title for significance
+    #   values = c("red", "black") # Colors for significant and non-significant points
+    # ) +
+    facet_grid(
+      rows = vars(var), # Create separate panels for each variable
+      scales = "free", # Allow scales to adjust freely per panel
+      space = "free_y",
+      switch = "both" # Switch facet labels to both sides
+    ) +
+    xlab("Odds ratios") + # Label for the x-axis
+    ylab("") + # Remove y-axis label
+    theme_classic() + # Use a clean, minimal theme
+    theme(panel.grid.major.y = element_line(colour = "lightgray"),
+          text = element_text(size = 10)) + # Add gridlines for readability
+    geom_text(
+      aes(x = 1.75, y = reorder(mod, -id), label = dataForest$label), # Add text labels for estimates
+      size = 3
+    )
+```
+
+```{r}
+# Create the data frame for the forest plot
+dataForest <- data.frame(
+  var = c("Age", "Age", "Age", "Age", "Sex", "Sex", "Diabetes", "Diabetes", "Smoker", "Smoker"), # Variables
+  mod = c("18-24", "25-44", "45-64", "64+", "Male", "Female", "No", "Yes", "No", "Yes"), # Categories or modalities within variables
+  estimate = c(NA, 1.05, 1.38, 1.72, NA, 0.87, NA, 2.48, NA, 0.97), # Point estimates (Odds Ratios)
+  conf.low = c(NA, 0.92, 1.21, 1.44, NA, 0.72, NA, 2.13, NA, 0.88), # Lower bounds of confidence intervals
+  conf.high = c(NA, 1.22, 1.63, 1.87, NA, 1.01, NA, 2.67, NA, 1.05) # Upper bounds of confidence intervals
+) %>% 
+  dplyr::filter(!is.na(estimate)) %>%
+  mutate( 
+    id = 1:6, # Assign a unique ID to each row
+    mod = paste0(var, " = ", mod),# Create labels for display
+    estimate = ifelse(is.na(estimate), 1, estimate), # Replace missing estimates with 1 (reference)
+    conf.low = ifelse(is.na(conf.low), 1, conf.low), # Replace missing lower bounds with 1 (reference)
+    conf.high = ifelse(is.na(conf.high), 1, conf.high), # Replace missing upper bounds with 1 (reference)
+    signif = ifelse(conf.low <= 1 & conf.high >= 1, "p>0.05", "p<0.05") 
+    # Determine significance: overlaps 1 (p>0.05) or not (p<0.05)
+  )
+
+
+
+# Create the forest plot using ggplot2
+ggplot(dataForest) + 
+  geom_vline(
+    xintercept = 1, # Reference line at Odds Ratio = 1
+    color = "gray25", 
+    linetype = 2 # Dashed line
+  ) + 
+  geom_vline(
+    xintercept = c(0.25, 0.5, 2, 4), # Additional vertical lines for log-scale guidance
+    color = "gray75",
+    linetype = "dashed"
+  ) +
+  geom_errorbar(
+    aes(
+      y = reorder(mod, -id), # Reorder y-axis labels based on ID
+      xmin = conf.low, # Lower bound of the confidence interval
+      xmax = conf.high # Upper bound of the confidence interval
+    ),
+    position = position_dodge(0.5), # Adjust error bar position
+    width = 0.2, # Width of the error bars
+    size = 0.8 # Thickness of the error bars
+  ) + 
+  geom_point(
+    aes(x = estimate, y = reorder(mod, -id), shape = signif, size = signif), # Add points for the estimates
+    position = position_dodge(width = 0.5), # Adjust point position
+  ) + 
+  scale_x_log10( # Use a logarithmic scale for x-axis
+    breaks = c(0.5, 1, 2, 4), # Specify tick marks
+    limits = c(0.49, 6) # Set x-axis limits
+  ) +
+  scale_shape_manual(
+    name = "Significance", # Legend title for significance
+    values = c(15, 18) # Colors for significant and non-significant points
+  ) +
+  scale_size_manual(
+    name = "Significance", # Legend title for significance
+    values = c(4, 2) # Colors for significant and non-significant points
+  ) +
+  xlab("Odds ratio") + # Label for the x-axis
+  ylab("") + # Remove y-axis label
+  theme_classic() + # Use a clean, minimal theme
+  theme(panel.grid.major.y = element_line(colour = "lightgray", linetype = "dotted")) # Add gridlines for readability
+```
+
+# Epidemiology
+
+## Epidemic curves
+
+```{r}
+dataCurve <- data.frame(
+  Incident = c(rep("Severe Covid-19 case", 464), rep("Severe adverse reaction", 76)),
+  Date = rep(seq.POSIXt(as_datetime("2020-06-01 00:00:00", tz = "CET"), 
+                        as_datetime("2023-02-01 00:00:00", tz = "CET"), by = "month"), 
+             c(19, 11, 11,  9, 13, 21, 58, 49, 73, 83, 33, 19, 14 ,13, 16, 11,
+                      3,  3, 11, 26,  8,  2,  4,  3,  8,  1,  4,  2,  4,  4,  2, 1,  1))
+)
+
+dataDoses <- data.frame(
+  Date = seq.Date(as.Date("2021-01-01"), as.Date("2023-01-01"), by = "month"),
+  Ndoses = c(4573, 5343,   5474,  27699,  73329, 137575, 109853,  62694,  29315,   9604,
+             10456,  95054,  81274,  17859,   3998,   2385,   2384,   1772,   1931,   1471,
+             2326,   1872,   7005,   9746,   4759)
+)
+
+monthly_breaks <- seq.POSIXt(
+  from = as_datetime("2020-01-01 00:00:00", tz = "CET"),
+  to = as_datetime("2023-04-01 00:00:00", tz = "CET"),
+  by = "month"
+)
+
+ymax <- 87.5
+coeff <- (140000 / ymax) 
+dataDoses$Ndoses <- dataDoses$Ndoses / coeff
+
+# Initialize the plot with a dataset (DATA_ex1_1)
+ggplot(dataCurve) + 
+  # Add a histogram with dodged bars, colored by the "Incident" variable
+  geom_histogram(
+    mapping = aes(x = Date, fill = Incident), # Map 'cas_date' to x-axis, and 'Incident' to fill
+    breaks = monthly_breaks,                     # Use specified monthly breaks
+    closed = "left",                             # Define intervals as left-closed
+    color = "white",                             # Set white border for bars
+    position = "dodge"                           # Dodge bars side by side
+  ) + 
+  # Add horizontal grid lines with white color
+  geom_hline(yintercept = 1:ymax, color = "white") + 
+  # Add vertical reference lines for specific dates
+  geom_vline(
+    xintercept = as_datetime(c("2021-01-01 00:00:00", "2022-01-01 00:00:00"), tz = "CET"), # Define dates as datetime objects
+    color = "lavenderblush4",                    # Set line color
+    size = 1                                     # Set line thickness
+  )  +
+  # Annotate rectangular periods of interest
+  annotate(
+    "rect",                                     # Specify rectangle annotation
+    xmin = as_datetime("2020-04-01 00:00:00", tz = "CET"), # Start of the rectangle
+    xmax = as_datetime("2020-06-01 00:00:00", tz = "CET"), # End of the rectangle
+    ymin = 0,                                   # Rectangle starts at y = 0
+    ymax = ymax,                                # Rectangle ends at y = ymax
+    fill = "gray",                              # Set fill color to gray
+    alpha = 0.25                                # Set transparency
+  )  +
+  # Repeat annotation for additional periods
+  annotate("rect", xmin = as_datetime("2020-11-01 00:00:00", tz = "CET"), 
+           xmax = as_datetime("2021-01-01 00:00:00", tz = "CET"), ymin = 0, ymax = ymax, fill = "gray", alpha = 0.25)  +
+  annotate("rect", xmin = as_datetime("2021-04-01 00:00:00", tz = "CET"), 
+           xmax = as_datetime("2021-06-01 00:00:00", tz = "CET"), ymin = 0, ymax = ymax, fill = "gray", alpha = 0.25) +
+  # Add a line plot for data in DATA_ex1_2
+  geom_line(
+    data = dataDoses,
+    aes(
+      x = as_datetime(paste(Date, "00:00:00"), tz = "CET"), # Convert Date to datetime
+      y = Ndoses,                                             # Use Ndoses for y-axis
+      colour = "Number of vaccine doses"                # Set color legend
+    ),
+    linetype = 5                                            # Set line type
+  ) +
+  # Add points on the line plot
+  geom_point(
+    data = dataDoses,
+    aes(x = as_datetime(paste(Date, "00:00:00"), tz = "CET"), y = Ndoses), # Map Date and Ndoses
+    colour = "darkslateblue",              # Set color
+    shape = 16,                    # Use solid circles
+    size = 2                       # Set point size
+  ) + 
+  # Format x-axis as datetime
+  scale_x_datetime(
+    expand = c(0, 0),              # Remove padding
+    date_breaks = "month",         # Major breaks every month
+    date_minor_breaks = "month",   # Minor breaks also monthly
+    date_labels = "%m/%y"          # Format as MM/YY
+  ) +
+  # Customize color scale for doses
+  scale_colour_manual("Doses", values = "darkslateblue") +
+  # Use classic theme for the plot
+  theme_classic() + 
+  # Modify various theme elements
+  theme(
+    panel.grid.minor.y = element_line(colour = "lightgray", size = 1), # Minor grid lines
+    panel.grid.major.y = element_line(colour = "lavenderblush4", size = 1), # Major grid lines
+    axis.text.x = element_text(angle = 90),                           # Rotate x-axis labels
+    axis.text.y.right = element_text(color = "darkslateblue"),                # Color right y-axis text
+    axis.line.y.right = element_line(color = "darkslateblue"),                # Color right y-axis line
+    axis.title.y.right = element_text(color = "darkslateblue"),               # Color right y-axis title
+    legend.position = "bottom"
+  ) + 
+  # Format y-axis with a secondary axis
+  scale_y_continuous(
+    expand = c(0, 0),               # Remove padding
+    limits = c(0, ymax),        # Set y-axis limits
+    breaks = seq(0, 90, 10),        # Major breaks every 10
+    sec.axis = sec_axis(
+      trans = ~ . * coeff,          # Transform secondary axis
+      name = "Number of doses dispensed", # Secondary axis title
+      breaks = seq(0, 90, 10)*coeff, # Secondary axis breaks
+      labels = formatC(             # Format secondary axis labels
+        seq(0, 90, 10)*coeff,
+        format = "f",
+        big.mark = " ",
+        digits = 0
+      )
+    )
+  ) + 
+  # Add titles and axis labels
+  labs(title = "", x = " ", y = "Number of incidents") +
+  # Add text annotations for specific periods
+  geom_text(mapping = aes_q(
+    x = as_datetime("2020-07-01 00:00:00", tz = "CET"), y = 82, label = "Period n°1"
+  )) +
+  geom_text(mapping = aes_q(
+    x = as_datetime("2021-07-01 00:00:00", tz = "CET"), y = 82, label = "Period n°2"
+  )) +
+  geom_text(mapping = aes_q(
+    x = as_datetime("2022-08-01 00:00:00", tz = "CET"), y = 82, label = "Period n°3"
+  ))
+```
+
+```{r}
+# Create a data frame for histogram visualization
+dataCurve <- data.frame(
+  # "Sex" column with repeated values for "Male" and "Female"
+  Sex = c(rep("Male", 611), rep("Female", 915)),
+  # "Date" column with monthly timestamps repeated according to specified counts
+  Date = c(
+    # Male dates: repeated monthly sequence with specific counts for each month
+    rep(seq.POSIXt(
+      as_datetime("2023-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-02-01 00:00:00", tz = "CET"),
+      by = "month"
+    ), c(30, 29, 26, 24, 22, 20, 18, 16, 14, 12, 10, 10, 12, 14, 17, 19, 22, 26, 29, 32, 32 ,33, 34, 36, 37, 37)),
+    # Female dates: repeated monthly sequence with specific counts for each month
+    rep(seq.POSIXt(
+      as_datetime("2023-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-02-01 00:00:00", tz = "CET"),
+      by = "month"
+    ), c(30, 31, 31, 31, 31, 33, 33, 34, 35, 36, 38, 39, 39, 40, 40, 41, 40, 40, 39, 37, 35, 34, 34, 32, 32, 30))
+  )
+)
+
+# Define monthly breaks for the histogram
+monthly_breaks <- seq.POSIXt(
+  from = as_datetime("2023-01-01 00:00:00", tz = "CET"),  # Start of the range
+  to = as_datetime("2025-02-01 00:00:00", tz = "CET"),    # End of the range
+  by = "month"                                            # Break intervals (monthly)
+)
+
+# Create the histogram using ggplot2
+ggplot(dataCurve) + 
+  # Add a histogram layer
+  geom_histogram(
+    mapping = aes(x = Date),  # Map the "Date" column to the x-axis
+    breaks = monthly_breaks,  # Use predefined monthly breaks for bins
+    closed = "left",          # Bins include the left boundary
+    color = "white",          # White borders around bars
+    position = "dodge",       # Position bars side by side
+    fill = "#0f766e"          # Fill color for bars
+  ) + 
+  # Add horizontal lines at intervals of 5
+  geom_hline(
+    yintercept = seq(5, 45, by = 5),  # Sequence of horizontal line positions
+    color = "white"                     # Line color
+  ) +
+  # Add a horizontal line at y=0
+  geom_hline(
+    aes(yintercept = 0)
+  ) +
+  # Customize x-axis labels and ticks
+  scale_x_datetime(
+    expand = c(0, 0),            # No expansion at the axis limits
+    date_breaks = "month",       # Major breaks at each month
+    date_minor_breaks = "month", # Minor breaks at each month
+    date_labels = "%m/%y"        # Format labels as "month/year"
+  ) +
+  # Customize y-axis labels and ticks
+  scale_y_continuous(
+    expand = c(0, 0),            # No expansion at the axis limits
+    limits = c(0, 45),           # Set y-axis limits between 0 and 60
+    breaks = seq(0, 45, 10)      # Major breaks at intervals of 10
+  ) +
+  # Add plot titles and axis labels
+  labs(
+    title = "",                  # Main title (empty)
+    caption = "",                # Caption (empty)
+    x = " ",                     # X-axis label (empty space)
+    y = "Number of cases"        # Y-axis label
+  ) +
+  # Create separate panels for each sex
+  facet_grid(
+    rows = vars(Sex)             # Facet by "Sex" variable (one row for each value)
+  ) +
+  # Apply a classic theme
+  theme_classic() +
+  # Customize the appearance of grid lines and axis text
+  theme(
+    panel.grid.minor.y = element_line(
+      colour = "lightgray",      # Minor grid line color
+      size = 1                   # Minor grid line size
+    ),
+    panel.grid.major.y = element_line(
+      colour = "lavenderblush4", # Major grid line color
+      size = 1                   # Major grid line size
+    ),
+    axis.text.x = element_text(angle = 90)
+  )
+```
+
+```{r}
+# Create a data frame for the bar plot
+dataCurve <- data.frame(
+  # "Sex" column with repeated values for "Male" and "Female"
+  Sex = c(rep("Male", 323), rep("Female", 349)),
+  
+  # "Date" column with monthly timestamps repeated according to specified counts
+  Date = c(
+    # Male dates: repeated monthly sequence with specific counts for each month
+    rep(seq.POSIXt(
+      as_datetime("2024-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-01-01 00:00:00", tz = "CET"),
+      by = "month"
+    ), c(15, 21, 27, 26, 33, 38, 30, 22, 28, 17, 20, 19, 27)),
+    
+    # Female dates: repeated monthly sequence with specific counts for each month
+    rep(seq.POSIXt(
+      as_datetime("2024-01-01 00:00:00", tz = "CET"),
+      as_datetime("2025-01-01 00:00:00", tz = "CET"),
+      by = "month"
+    ), c(34, 41, 56, 32, 29, 33, 37, 26, 21, 11, 9, 12, 8))
+  )
+)
+
+# Define monthly breaks for the bar plot
+monthly_breaks <- seq.POSIXt(
+  from = as_datetime("2024-01-01 00:00:00", tz = "CET"),  # Start of the range
+  to = as_datetime("2025-01-01 00:00:00", tz = "CET"),    # End of the range
+  by = "month"                                            # Break intervals (monthly)
+)
+
+# Create the bar plot using ggplot2
+ggplot(dataCurve) + 
+  # Add a stacked bar plot layer
+  geom_bar(
+    mapping = aes(
+      x = Date,       # Map "Date" to the x-axis
+      fill = Sex      # Use "Sex" for the fill aesthetic to create stacked bars
+    ),
+    breaks = monthly_breaks,  # Define bin breaks using the monthly breaks
+    closed = "left",          # Bins include the left boundary
+    color = "white",          # White borders around bars
+    position = "stack"        # Stack the bars by "Sex"
+  ) + 
+  # Add horizontal lines at regular intervals
+  geom_hline(
+    yintercept = seq(5, ymax, by = 5),  # Sequence of horizontal line positions
+    color = "white"                     # Line color
+  ) +
+  # Add a horizontal line at y=0
+  geom_hline(
+    aes(yintercept = 0)
+  ) +
+  # Customize x-axis labels and ticks
+  scale_x_datetime(
+    expand = c(0, 0),            # No expansion at the axis limits
+    date_breaks = "month",       # Major breaks at each month
+    date_minor_breaks = "month", # Minor breaks at each month
+    date_labels = "%m/%y"        # Format labels as "month/year"
+  ) +
+  # Customize y-axis labels and ticks
+  scale_y_continuous(
+    expand = c(0, 0),            # No expansion at the axis limits
+    limits = c(0, 90),           # Set y-axis limits between 0 and 90
+    breaks = seq(0, 90, 10)      # Major breaks at intervals of 10
+  ) +
+  # Add plot titles and axis labels
+  labs(
+    title = "",                  # Main title (empty)
+    caption = "",                # Caption (empty)
+    x = " ",                     # X-axis label (empty space)
+    y = "Number of cases"        # Y-axis label
+  ) +
+  # Apply a classic theme
+  theme_classic() +
+  # Customize the appearance of grid lines
+  theme(
+    panel.grid.minor.y = element_line(
+      colour = "lightgray",      # Minor grid line color
+      size = 1                   # Minor grid line size
+    ),
+    panel.grid.major.y = element_line(
+      colour = "lavenderblush4", # Major grid line color
+      size = 1                   # Major grid line size
+    )
+  )
+```
+
+## Care trajectories
+
+### Sankey
+
+```{r}
+createSankeyData <- function(data, states, timesColumns) {
+  # Function to prepare data for a Sankey diagram
+  # Arguments:
+  #   data: A dataframe containing sequential data
+  #   states: A vector of unique states
+  #   timesColumns: A vector of column names representing time steps
+  
+  data <- as.data.frame(data)  # Ensure the input is a dataframe
+  n_states <- length(states)  # Number of unique states
+  n_times <- length(timesColumns)  # Number of time columns (steps)
+  
+  # Convert time columns into factors with specified levels (states)
+  for (i in 1:n_times) {
+    data[, timesColumns[i]] <- factor(data[, timesColumns[i]], levels = states)
+  }
+  
+  # Define colors for the nodes (states) and links between states
+  nodesCols <- c("#AAC0AF", "#B28B84", "#1C4073", "#0f766e", "#653239", "#472C1B", "#5C2751")[1:n_states]
+  linksCols <- c("#D0DCD3", "#D0B8B4", "#285CA4", "#17B5A7", "#964A54", "#76492D", "#8F3D7E")[1:n_states]
+  
+  vals <- c()  # Initialize a vector to store transition counts
+  
+  # Calculate transitions between consecutive time steps for each state
+  for (i in 2:n_times) {
+    for (j in 1:n_states) {
+      # Count occurrences of transitions from state j at time (i-1) to all states at time i
+      vals <- c(vals, table(data[, timesColumns[i]][data[, timesColumns[i - 1]] == states[j]]))
+    }
+  }
+  
+  # Prepare Sankey diagram data structure
+  dataSankeyTem <- list(
+    Nodes = data.frame(
+      X = 1:(n_states * n_times),  # Node indices (unique for each state and time step)
+      label = rep(states, n_times),  # Node labels (repeated for each time step)
+      color = rep(nodesCols, n_times)  # Node colors
+    ),
+    Links = data.frame(
+      source = c(rep(1:(n_states * (n_times - 1)), each = n_states)) - 1,  # Source nodes for transitions
+      target = as.vector(sapply(split((n_states + 1):(n_states * n_times), 
+                                      rep(1:(n_times - 1), each = n_states)),
+                                function(x) {rep(x, n_states)})) - 1,  # Target nodes for transitions
+      value = vals,  # Transition counts
+      color = rep(rep(linksCols, each = n_states), n_times - 1)  # Colors for links
+    )
+  )
+}
+
+# Example usage: Create Sankey data for three time steps with predefined states
+sankeyData <- createSankeyData(
+  data.frame(
+    T1 = sample(
+      c("Initial treatment", "Substitution", "No treatment"),
+      size = 1000, prob = c(0.95, 0.025, 0.025), replace = TRUE),
+    T2 = sample(
+      c("Initial treatment", "Substitution", "No treatment"),
+      size = 1000, prob = c(0.75, 0.125, 0.125), replace = TRUE),
+    T3 = sample(
+      c("Initial treatment", "Substitution", "No treatment"),
+      size = 1000, prob = c(0.5, 0.25, 0.25), replace = TRUE)),
+  c("Initial treatment", "Substitution", "No treatment"),  # Define states
+  c("T1", "T2", "T3")  # Define time columns
+)
+
+
+plotSankey <- function(Nodes, Links, add.prop = FALSE) {
+  # Function to create a Sankey diagram using plotly.
+  # Args:
+  #   Nodes: Data frame containing node details (labels, colors, etc.).
+  #   Links: Data frame containing link details (source, target, values, colors).
+  #   add.prop: Logical. If TRUE, adds percentage proportions to node labels.
+  
+  if (add.prop) {
+    # Check if all sources in Links have an equal number of occurrences
+    if (all(table(Links$source) == table(Links$source)[1])) {
+      nrow_per_times <- table(Links$source)[1] ^ 2 # Determine rows per iteration
+      n_times <- nrow(Links) / nrow_per_times      # Calculate number of iterations
+      
+      for (i in 1:n_times) {
+        # Extract subset of Links for current iteration
+        tab <- Links[((i - 1) * nrow_per_times + 1):((i - 1) * nrow_per_times + nrow_per_times), ]
+        
+        # Calculate proportions for targets
+        vals <- as.numeric(by(tab$value, tab$target, sum)) # Sum values by target
+        Nodes[Nodes$X %in% (unique(tab$target) + 1), "label"] <- paste0(
+          Nodes[Nodes$X %in% (unique(tab$target) + 1), "label"],
+          " (",
+          formatC(vals / sum(vals) * 100, digits = 1, format = 'f'), # Format as percentage
+          "%)"
+        )
+        
+        if (i == 1) {
+          # Calculate proportions for sources during the first iteration
+          vals <- as.numeric(by(tab$value, tab$source, sum)) # Sum values by source
+          Nodes[Nodes$X %in% (unique(tab$source) + 1), "label"] <- paste0(
+            Nodes[Nodes$X %in% (unique(tab$source) + 1), "label"],
+            " (",
+            formatC(vals / sum(vals) * 100, digits = 1, format = 'f'), # Format as percentage
+            "%)"
+          )
+        }
+      }
+    } else {
+      warning(
+        "Links arg does not have equal number of each source and function cannot automatically calculate proportions."
+      )
+    }
+  }
+  
+  # Convert colors in Links to RGBA format with transparency
+  Links$color <- apply(grDevices::col2rgb(Links$color), 2, function(x) {
+    paste0("rgba(", x[1], ",", x[2], ",", x[3], ",0.4)") # Add 40% transparency
+  })
+  
+  # Create the Sankey diagram using plotly
+  fig <- plot_ly(
+    type = "sankey",          # Specify Sankey diagram
+    orientation = "h",        # Horizontal orientation
+    alpha_stroke = 0.2,       # Node border transparency
+    node = list(
+      label = Nodes$label,    # Node labels
+      color = Nodes$color,    # Node colors
+      pad = 15,               # Padding between nodes
+      thickness = 20,         # Node thickness
+      line = list(color = "black", width = 0.5) # Node border style
+    ),
+    link = list(
+      source = Links$source,  # Source nodes for links
+      target = Links$target,  # Target nodes for links
+      value =  Links$value,   # Link values
+      color = Links$color     # Link colors (RGBA)
+    )
+  )
+  
+  # Customize the layout of the Sankey diagram
+  fig <- fig %>% layout(
+    font = list(
+      size = 14,             # Font size for labels
+      color = "black",       # Font color
+      weight = "bold"        # Font weight
+    )
+  )
+  
+  # Return the generated plot
+  fig
+}
+
+plotSankey(sankeyData$Nodes, sankeyData$Links, add.prop = TRUE)
+```
+
+### Carpet
+
+```{r}
+# Create a dataset simulating treatment sequences
+carpetData <- data.frame(
+  T1 = sample(  # Initial treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.95, 0.025, 0.025), replace = TRUE
+  ),
+  T2 = sample(  # Second treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.75, 0.125, 0.125), replace = TRUE
+  ),
+  T3 = sample(  # Third treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.65, 0.25, 0.1), replace = TRUE
+  ),
+  T4 = sample(  # Third treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.5, 0.25, 0.25), replace = TRUE
+  ),
+  T5 = sample(  # Third treatment stage
+    c("Initial treatment", "Substitution", "No treatment"),
+    size = 100000, prob = c(0.35, 0.4, 0.25), replace = TRUE
+  )
+) %>%
+  group_by(T1, T2, T3, T4, T5) %>%  # Group data by unique sequences
+  summarise(w = n())  # Summarize the weight (frequency) of each sequence
+
+# Define a sequence object using the TraMineR package
+seqCarpet <- seqdef(
+  data = carpetData[, c("T1", "T2", "T3", "T4", "T5")],  # Extract sequence columns
+  weights = carpetData$w,  # Use weights for the sequences
+  cpal = c("#AAC0AF", "#B28B84", "#1C4073"),  # Custom color palette for states
+  cnames = c("T1", "T2", "T3", "T4", "T5")  # Custom names for the sequence stages
+)
+
+# Define substitution costs using a constant method
+couts <- TraMineR::seqsubm(seqCarpet, method = "CONSTANT", cval = 2)
+
+# Compute optimal matching distances
+seq.om <- TraMineR::seqdist(seqCarpet,
+                  method = "OM",  # Optimal Matching (OM) method
+                  indel = 1,      # Insertion/deletion cost
+                  sm = couts)     # Substitution matrix
+
+# Perform hierarchical clustering on the sequence distances
+seq.dist <- hclust(as.dist(seq.om), method = "ward.D2")
+
+# Create sequence clusters by cutting the dendrogram into 2 groups
+seq_cl <- factor(cutree(seq.dist, 3), labels = c("Class n°1", "Class n°2", "Class n°3"))
+
+# Plot individual sequence plots and group sequence plots side by side
+ggpubr::ggarrange(
+  ggseqplot::ggseqiplot(seqCarpet, facet_ncol = 1, no.n = TRUE) +  # Individual plot
+    theme(
+      panel.spacing = unit(0.1, "lines"),  # Adjust panel spacing
+      axis.text.y = element_text(colour = "white"),  # Hide y-axis text
+      axis.ticks.y = element_line(colour = "white")  # Hide y-axis ticks
+    ) +
+    labs(y = ""),  # Remove y-axis label
+  ggseqplot::ggseqiplot(  # Plot grouped sequences
+    seqCarpet,
+    group = seq_cl,  # Group by clusters
+    facet_ncol = 1,
+    no.n = TRUE
+  ) +
+    force_panelsizes(rows = table(seq_cl)) +  # Adjust panel sizes by group
+    theme(
+      panel.spacing = unit(0.1, "lines"),  # Adjust panel spacing
+      axis.text.y = element_text(colour = "white"),  # Hide y-axis text
+      axis.ticks.y = element_line(colour = "white")  # Hide y-axis ticks
+    ) +
+    labs(y = ""),  # Remove y-axis label
+  ncol = 2,  # Arrange plots in 2 columns
+  nrow = 1,  # Arrange plots in 1 row
+  common.legend = TRUE,  # Use a common legend
+  legend = "bottom"  # Place legend at the bottom
+)
+
+```
+
+## Nested Data
+
+### Sunburst
+
+```{r}
+# Create a dataset for the sunburst chart
+gdataSunburst <- data.frame(
+  ids = c("Drug indication",  # Root node
+          "Cardio", "Neuro", "Psy",  # First level of the hierarchy
+          "Blood pressure", "Cardio - Other",  # Second level under "Cardio"
+          "Parkinson disease", "Neuro - Other",  # Second level under "Neuro"
+          "C03EA04", "C09CA03", "C09DA03", "C07FB03",  # Third level under "Blood pressure" and "Cardio - Other"
+          "N03AA03", "N03AG06", "N04BB01", "N04BA02",  # Third level under "Neuro - Other" and "Parkinson disease"
+          "N03AG01"),  # Third level under "Psy"
+  labels = c("Drug<br>indication",  # Display label for root node
+             "Cardio", "Neuro", "Psy",  # Display labels for first level
+             "Blood<br>pressure", "Other",  # Display labels for second level under "Cardio"
+             "Parkinson<br>disease", "Other",  # Display labels for second level under "Neuro"
+             "C03EA04", "C09CA03", "C09DA03", "C07FB03",  # Display labels for third level
+             "N03AA03", "N03AG06", "N04BB01", "N04BA02",  # Display labels for third level
+             "N03AG01"),  # Display label for third level under "Psy"
+  parents = c("",  # Root node has no parent
+              "Drug indication", "Drug indication", "Drug indication",  # First level nodes are children of "Drug indication"
+              "Cardio", "Cardio",  # Second level nodes under "Cardio"
+              "Neuro", "Neuro",  # Second level nodes under "Neuro"
+              "Blood pressure", "Cardio - Other", "Blood pressure", "Blood pressure",  # Third level under "Cardio"
+              "Neuro - Other", "Neuro - Other", "Parkinson disease", "Parkinson disease",  # Third level under "Neuro"
+              "Psy")  # Third level under "Psy"
+)
+
+# Generate a sunburst plot using the Plotly package
+plot_ly(
+  data = gdataSunburst,  # Data for the chart
+  ids = ~ids,  # Unique identifiers for each node
+  labels = ~labels,  # Labels to display on the chart
+  parents = ~parents,  # Define parent-child relationships
+  type = 'sunburst'  # Specify the chart type as a sunburst diagram
+)
+
+```
+
+```{r}
+# Create a dataset for the sunburst chart with hierarchical relationships and node values
+dataSunburst <- data.frame(
+  ids = c("Drug indication",  # Root node
+          "Cardio", "Neuro", "Psy",  # First-level children of the root
+          "Blood pressure", "Cardio - Other",  # Second-level children under "Cardio"
+          "Parkinson disease", "Neuro - Other",  # Second-level children under "Neuro"
+          "C03EA04", "C09CA03", "C09DA03", "C07FB03",  # Third-level nodes under "Cardio"
+          "N03AA03", "N03AG06", "N04BB01", "N04BA02",  # Third-level nodes under "Neuro"
+          "N03AG01"),  # Third-level node under "Psy"
+  labels = c("Drug<br>indication",  # Label for root node
+             "Cardio", "Neuro", "Psy",  # Labels for first-level children
+             "Blood<br>pressure", "Other",  # Labels for second-level children under "Cardio"
+             "Parkinson<br>disease", "Other",  # Labels for second-level children under "Neuro"
+             "C03EA04", "C09CA03", "C09DA03", "C07FB03",  # Labels for third-level nodes
+             "N03AA03", "N03AG06", "N04BB01", "N04BA02",  # Labels for third-level nodes
+             "N03AG01"),  # Label for third-level node under "Psy"
+  parents = c("",  # Root node has no parent
+              "Drug indication", "Drug indication", "Drug indication",  # First-level parents
+              "Cardio", "Cardio",  # Second-level parents under "Cardio"
+              "Neuro", "Neuro",  # Second-level parents under "Neuro"
+              "Blood pressure", "Cardio - Other", "Blood pressure", "Blood pressure",  # Third-level parents under "Cardio"
+              "Neuro - Other", "Neuro - Other", "Parkinson disease", "Parkinson disease",  # Third-level parents under "Neuro"
+              "Psy"),  # Third-level parent under "Psy"
+  n = c(464,  # Total count for the root node
+        253, 176, 35,  # Counts for first-level nodes
+        189, 64,  # Counts for second-level nodes under "Cardio"
+        127, 49,  # Counts for second-level nodes under "Neuro"
+        89, 64, 65, 35,  # Counts for third-level nodes under "Cardio"
+        38, 11, 80, 47,  # Counts for third-level nodes under "Neuro"
+        35)  # Count for third-level node under "Psy"
+)
+
+# Generate a sunburst plot using the Plotly package
+plot_ly(
+  data = dataSunburst,  # Use the prepared dataset
+  ids = ~ids,  # Specify unique identifiers for each node
+  labels = ~labels,  # Specify labels for each node
+  parents = ~parents,  # Specify parent-child relationships
+  values = ~n,  # Use the "n" column for node sizes
+  type = 'sunburst',  # Set the chart type to sunburst
+  branchvalues = 'total'  # Specify that values are distributed among child branches
+)
+
+```
+
+### Treemap
+
+```{r}
+# Create a data frame containing cause of death, details (subcategory), and occurrences
+dataTreemap <- data.frame(
+  cause_of_death = c(
+    "Cancer",
+    rep("Non cancerous diseases", 6),
+    rep("Road accidents", 2),
+    rep("Other or unknown causes", 4),
+    "Suicide"
+  ),
+  details = c(
+    NA,                     # Subcategories for "Cancer" are not specified
+    "Cardiac",              # Subcategories for "Non cancerous diseases"
+    "Respiratory",
+    "Mental disorders",
+    "Digestive",
+    "Endocrinian",
+    "Other",
+    "Car",                  # Subcategories for "Road accidents"
+    "Other",
+    "Weapons",              # Subcategories for "Other or unknown causes"
+    "Poorly defined",
+    "Undefined",
+    "Other",
+    NA                      # Subcategories for "Suicide" are not specified
+  ),
+  n = c(62, 19, 2, 1, 3, 2, 8, 7, 26, 5, 14, 8, 8, 52) # Occurrences for each category/subcategory
+)
+
+# Add the total count (n) for each cause_of_death to its label
+dataTreemap <- as.data.frame(t(apply(dataTreemap, 1, function(x) {
+  x[1] <- paste0(
+    x[1], " (n=",                             # Append the total count to the cause_of_death label
+    sum(dataTreemap$n[dataTreemap$cause_of_death == x[1]]), 
+    ")"
+  )
+  x
+})))
+dataTreemap$n <- as.numeric(dataTreemap$n)    # Convert the n column back to numeric after transformation
+
+# Generate the treemap
+treemap::treemap(
+  dataTreemap,
+  index = c("cause_of_death", "details"),      # Define hierarchical levels for the treemap
+  vSize = "n",                                # Size of rectangles corresponds to the n column
+  type = "index",                             # Color rectangles based on the index
+  algorithm = "pivotSize",                    # Use pivot size layout algorithm for better space optimization
+  title = "",                                 # No title for the treemap
+  align.labels = list(c("left", "top"), c("left", "bottom")), # Align labels in blocks
+  palette = "Pastel1",                        # Use pastel colors for the treemap
+  fontsize.title = 22,                        # Title font size
+  fontcolor.labels = "black",                 # Set label font color to black
+  bg.labels = 0,                              # Transparent background for labels
+  aspRatio = 1                                # Set aspect ratio to make the blocks square
+)
+
+```
+
+# Human body
+
+## Shape
+
+### Raw
+
+```{r}
+# Load the dataset from the specified file
+load("C:/Users/hugo.marthinet/Downloads/index.Rdata")
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Create a frequency table for muscle injuries
+freqTable <- data.frame(
+  Muscle = as.character(unique(dataBodygram$Muscle)),  # Unique muscles in the dataset
+  freq = rpois(length(unique(dataBodygram$Muscle)), 8)^2  # Simulate injury frequencies using a Poisson distribution
+)
+
+# Join the frequency table with the main dataBodygram dataset
+dataBodygram <- left_join(x = dataBodygram, y = freqTable)
+
+# Generate spatial polygons for the body map
+bodyMap <- sf_polygon(
+    dataBodygram,
+    x = "x",  # X-coordinates of the polygon points
+    y = "y",  # Y-coordinates of the polygon points
+    polygon_id = "Id",  # Identifier for each polygon
+    keep = TRUE  # Retain non-polygon data in the result
+)
+
+# Visualize the body map with a choropleth map
+mapsf::mf_map(
+  x = bodyMap,  # Spatial object to plot
+  type = "choro",  # Choropleth map type
+  var = "freq",  # Variable to map (frequency of injuries)
+  pal = rev(c("#BF0416", "#d53e4f", "#f46d43", "#fdae61", 
+              "#fee08b", "#e6f598", "#abdda4", "#66c2a5")),  # Color palette for mapping frequencies
+  breaks = ceiling(seq(0, max(dataBodygram$freq) * 1.05, length.out = 9)),  # Define class intervals for the variable
+  border = "#6b4266",  # Border color for polygons
+  lwd = 0.5,  # Line width for polygon borders
+  leg_title = "Injury frequencies"  # Legend title
+)
+```
+
+### Weighted
+
+```{r}
+# Load the dataset from the specified file
+load("C:/Users/hugo.marthinet/Downloads/index.Rdata")
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Create a frequency table for muscle injuries
+freqTable <- data.frame(
+  Muscle = as.character(unique(dataBodygram$Muscle)),  # Unique muscles in the dataset
+  freq = rpois(length(unique(dataBodygram$Muscle)), 8)^2  # Simulate injury frequencies using a squared Poisson distribution
+)
+
+# Join the frequency table with the main dataBodygram dataset
+dataBodygram <- left_join(x = dataBodygram, y = freqTable)
+
+# Create a body map with cartogram distortion based on injury frequency
+bodyMap <- cartogram::cartogram_cont(
+  sfheaders::sf_polygon(
+    dataBodygram,
+    x = "x",  # X-coordinates for the polygon vertices
+    y = "y",  # Y-coordinates for the polygon vertices
+    polygon_id = "Id",  # Identifier for each polygon
+    keep = TRUE  # Retain non-polygon data in the result
+  ),
+  weight = "freq",  # Weight for distortion (injury frequency)
+  itermax = 5  # Maximum number of iterations for cartogram adjustment
+)
+
+# Visualize the distorted body map with a choropleth representation
+mapsf::mf_map(
+  x = bodyMap,  # Spatial object to plot (distorted body map)
+  type = "choro",  # Choropleth map type
+  var = "freq",  # Variable to map (frequency of injuries)
+  pal = rev(c("#BF0416", "#d53e4f", "#f46d43", "#fdae61", 
+              "#fee08b", "#e6f598", "#abdda4", "#66c2a5")),  # Color palette for mapping frequencies
+  breaks = ceiling(seq(0, max(dataBodygram$freq) * 1.05, length.out = 9)),  # Define class intervals
+  border = "#6b4266",  # Color for polygon borders
+  lwd = 0.5,  # Line width for borders
+  leg_title = "Injury frequencies"  # Title for the legend
+)
+```
+
+## Organs
+
+Using the gganatogram package (<https://github.com/jespermaag/gganatogram>).
+
+```{r}
+gganatogram(data=hgMale_key, fillOutline='#440154FF', organism='human', sex='male', fill="value") + theme_void() + scale_fill_viridis()
+```
+
+```{r}
+organPlot <- data.frame(organ = c("heart", "leukocyte", "nerve", "brain", "liver", "stomach", "colon"), 
+ type = c("circulation", "circulation",  "nervous system", "nervous system", "digestion", "digestion", "digestion"), 
+ colour = c("red", "red", "purple", "purple", "orange", "orange", "orange"), 
+ value = c(10, 5, 1, 8, 2, 5, 5), 
+ stringsAsFactors=F)
+
+#>       organ           type colour value
+#> 1     heart    circulation    red    10
+#> 2 leukocyte    circulation    red     5
+#> 3     nerve nervous system purple     1
+#> 4     brain nervous system purple     8
+#> 5     liver      digestion orange     2
+#> 6   stomach      digestion orange     5
+#> 
+gganatogram(data=organPlot, fillOutline='#a6bddb', organism='human', sex='male', fill="colour") + theme_void()
+```
