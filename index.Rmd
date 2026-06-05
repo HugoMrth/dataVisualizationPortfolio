@@ -2,18 +2,22 @@
 title: "Data Vizualisation Portfolio"
 author: "Hugo Marthinet"
 date: "`r Sys.Date()`"
-output: 
+output:
   html_document:
     css: style.css
     code_folding: hide
-    toc: TRUE
-    toc_float: TRUE
-    toc_collaped: TRUE
+    toc: true
+    toc_float: true
+    toc_collaped: true
     toc_depth: 3
-    number_sections: TRUE
+    number_sections: true
     theme: lumen
+  pdf_document:
+    toc: true
+    toc_depth: '3'
 ---
 
+```{=html}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   // Ajouter des boutons aux blocs de code
@@ -32,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 });
 </script>
-
+```
 ```{r options, include = FALSE}
 knitr::opts_chunk$set(
   warning = FALSE,
@@ -41,15 +45,15 @@ knitr::opts_chunk$set(
 )
 ```
 
-This is my data visualization portfolio.
+This is my data visualization portfolio, aka. the ultimate copy and paste tool.
 
-I gathered code I wrote to create some nice plots, put them in an Rmarkdown to create an HTML page where I would have an easy and centralized access to all of those code lines. The goal is to preview the graphs so I can identify the features I want to re-use while creating a new plot, and to be able to copy and paste the chunks I want.
+The whole markdown should run by iteself given all the packages are installed and you download the .Rdata file.
 
-The .Rmd file can run by itself, all the data used to draw the plots are either simulated, arbitrarily defined, or from a dataset.
-
-Below is the list of all the required packages. Mostly graphical tools, along with some statistical analysis resources.
+Below is the list of all the required packages. Mostly graphical tools, along with some statistical analysis resources. Any non-trivial function call should have the corresponding package specified.
 
 ```{r}
+set.seed(123)
+
 # Tidy data
 library(tidyverse)
 library(lubridate)
@@ -75,25 +79,26 @@ library(gridExtra)
 library(ggseqplot)
 library(ggh4x)
 library(ggstatsplot)
+library(ggsurvfit)
 
 # body
 library(sfheaders)
 library(cartogram)
 library(mapsf)
-library(gganatogram)
 library(viridis)
+# github pkg
+library(gganatogram)
 
 # Other graphics tools
 library(treemap)
+library(fmsb)
 ```
 
 # Basics
 
 ## Barplots
 
-
 ### Frequencies
-
 
 ```{r}
 # Simulate data for a barplot
@@ -160,7 +165,6 @@ ggplot(dataBarplot) +
   )
 ```
 
-
 ```{r}
 # Simulate data for a barplot
 dataBarplot <- data.frame(
@@ -222,8 +226,69 @@ ggplot(dataBarplot) +
   )
 ```
 
-### Proportions
+```{r}
+set.seed(123)
+# Simulate data for a barplot
+dataBarplot <- data.frame(
+  Cancer = rep(c("Cervix", "Vulva", "Vagina", "Penis", "Anus", "Oropharynx"), each = 4),
+  Stage = factor(rep(c("High grade lesions", "Early stage cancer", "Intermediate stage cancer", "Advanced stage cancer"), 6),
+                levels = c("High grade lesions", "Early stage cancer", "Intermediate stage cancer", "Advanced stage cancer")),
+  Cost = 5000) %>%
+  mutate(
+    Cost = ifelse(Cancer == "Cervix", Cost - runif(1, 1000, 2000), Cost),
+    Cost = ifelse(Cancer == "Vulva", Cost - runif(1, 1000, 3000), Cost),
+    Cost = ifelse(Cancer == "Vagina", Cost + runif(1, -1000, 2000), Cost),
+    Cost = ifelse(Cancer == "Penis", Cost + runif(1, 0, 2000), Cost),
+    Cost = ifelse(Cancer == "Anus", Cost + runif(1, 0, 3000), Cost),
+    Cost = ifelse(Cancer == "Oropharynx", Cost + runif(1, 0, 5000), Cost),
+    
+    Cost = ifelse(Stage == "High grade lesions", Cost + runif(1, 2000, 7000), Cost),
+    Cost = ifelse(Stage == "Early stage cancer", Cost + runif(1, 0, 3000), Cost),
+    Cost = ifelse(Stage == "Intermediate stage cancer", Cost - runif(1, 0, 4000), Cost),
+    Cost = ifelse(Stage == "Advanced stage cancer", Cost - runif(1, 0, 5000), Cost),
+   Cost = Cost + 3000
+  )
 
+
+# Initialize the plot with the dataset (DATA_ex2_1)
+ggplot(dataBarplot) + 
+  # Add a stacked bar chart (geom_col creates bars with heights determined by 'N')
+  geom_col(
+    mapping = aes(reorder(Cancer, -Cost), Cost, fill = Stage), # Map 'N' to x, 'Symptome' to y, and 'Temps' to fill color
+    width = 0.6,                              # Set the bar width
+    position = "stack"                        # Stack bars by the 'fill' variable
+  ) +
+  # Add a vertical line at x = 0 for reference
+  geom_vline(aes(xintercept = 0)) + 
+  # Customize the x-axis scale
+  scale_y_continuous(
+    limits = c(0, 50000),                     # Set the range for the x-axis
+    breaks = seq(0, 50000, 10000),             # Major tick marks every 1000 units
+    minor_breaks = seq(5000, 45000, 10000),      # Minor tick marks every 500 units
+    expand = c(0, 0)                         # Remove padding on the x-axis
+  ) + 
+  scale_fill_manual(
+    name = "Cancer stage",
+    values = c('#28AFB0',  "#B2FF9E", '#F6803C',  '#82354F')
+  ) +
+  xlab("Potentially HPV-related disease") +
+  ylab("HCRU costs (euros)") +
+  # Customize the overall appearance of the plot
+  theme(
+    panel.background = element_rect(fill = "white"),   # Set panel background to white
+    panel.grid.major.y = element_line(color = "darkgray"), # Major grid lines for x-axis
+    panel.grid.minor.y = element_line(colour = "lightgray"), # Minor grid lines for x-axis
+    legend.position = "right",
+    axis.text.x = element_text(
+      size = 8,                               # Font size
+      angle = 45,                              # Rotate text 45 degrees
+      vjust = 1,                               # Vertical alignment
+      hjust = 1                                # Horizontal alignment
+    )
+  )
+```
+
+### Proportions
 
 ```{r}
 # Simulate data for a bar plot
@@ -309,7 +374,6 @@ ggplot(dataBarplot) +
     )
   )
 ```
-
 
 ```{r}
 # Create the data frame for the bar plot
@@ -404,10 +468,7 @@ ggplot(data = dataBarplot) +
 
 ```
 
-
-
 ### Incidence rates
-
 
 ```{r}
 # Define maximum y-axis value and coefficient for secondary y-axis scaling
@@ -498,7 +559,6 @@ ggplot(dataBarplot, aes(x = year, y = n_cases, width = 0.95)) +
     y = " "                         # y-axis title (empty)
   )
 ```
-
 
 ## Line charts
 
@@ -594,7 +654,6 @@ ggplot(dataLinechart, aes(x = year)) +
 
 ```
 
-
 ### Spaghetti plot
 
 ```{r}
@@ -640,13 +699,9 @@ ggplot(plotData,
   )
 ```
 
-
-
 ## Boxplots
 
-
 ### Classic
-
 
 ```{r}
 # Create a data frame for boxplot visualization
@@ -708,7 +763,6 @@ ggplot(dataBoxplot) +
 
 ```
 
-
 ```{r}
 dataBoxplot <- data.frame(
   y = rnorm(200), 
@@ -723,7 +777,6 @@ ggplot(dataBoxplot, aes(x = Group, y = y, colour = Group)) +
   xlab("Group") +                    # X-axis label
   ylab("Some randomly generated values") # Y-axis label
 ```
-
 
 ```{r}
 # Simulate data for a boxplot
@@ -777,6 +830,60 @@ ggboxplot(
     caption = "2 by 2 testing: Student's t-test, p-value adjustment: Bonferroni"  # Caption explaining test details
   )
 
+```
+
+```{r}
+dataBoxplot <- data.frame(
+  TIME = factor(
+      rep(rep(c("T0", "T3", "T6", "T9", "T12", "T15", "T18", "T24"), each = 100), 2),
+      levels = c("T0", "T3", "T6", "T9", "T12", "T15", "T18", "T24")),
+  Score = c(rnorm(100, 10, 1), rnorm(100, 12, 2), rnorm(100, 13, 2), rnorm(100, 13, 1),
+            rnorm(100, 14, 2), rnorm(100, 15, 1), rnorm(100, 17, 1), rnorm(100, 18, 3),
+            rnorm(100, 10, 3), rnorm(100, 11, 1), rnorm(100, 11, 2), rnorm(100, 12, 1),
+            rnorm(100, 14, 1), rnorm(100, 16, 3), rnorm(100, 15, 1), rnorm(100, 15, 4)),
+  Cohort = factor(rep(c("First Group", "Second Group"), each = 8*100),
+                  c("First Group", "Second Group"))
+)
+
+ggplot(dataBoxplot) +
+  # Add a boxplot layer for setup scores grouped by operation ID
+  geom_boxplot(
+    aes(group = interaction(TIME, Cohort), 
+        x = TIME, 
+        y = Score, 
+        colour = Cohort),  
+    position = position_dodge()
+     ) +
+  annotate(
+    "text",
+    x = 1:nlevels(dataBoxplot$TIME)-.2, y = 27.5,
+    label = paste0("n=", table(dataBoxplot$TIME[dataBoxplot$Cohort=="Second Group"])),
+    angle = 65, hjust = 0
+  ) +
+  annotate(
+    "text",
+    x = 1:nlevels(dataBoxplot$TIME)+.2, y = 27.5,
+    label = paste0("n=", table(dataBoxplot$TIME[dataBoxplot$Cohort=="First Group"])),
+    angle = 65, hjust = 0
+  ) +
+  ylab("Score value") +
+  # Label the x-axis
+  xlab("Time (in months)") +
+  # Customize the y-axis scale
+  scale_y_continuous(
+    limits = c(0, 40),         # Set y-axis limits between 0 and 10
+    breaks = seq(0, 30, by = 5),             # Add breaks at each integer value
+    expand = c(0, 0)           # Remove padding on the axis
+  ) +
+  # Customize the x-axis scale
+  scale_x_discrete(
+    labels = c("T0", "T3", "T6", "T9", "T12", "T15", "T18", "T24")
+  ) + 
+  scale_color_manual(
+    values = c("First Group" = "#005263", "Second Group" = "#E64E2B")
+  ) +
+  # Apply a minimal theme for clean visualization
+  theme_minimal()
 ```
 
 ### Violins
@@ -856,12 +963,11 @@ p2 <- ggplot(plotData) +
     plot.margin=unit(c(-0.5,1,1,1), "cm")
   )
 
-grid.arrange(p1, p2)
+gridExtra::grid.arrange(p1, p2)
 
 ```
 
 ## Scatter plots
-
 
 ### 2D
 
@@ -903,7 +1009,6 @@ ggplot(dataScatter) +
   labs(subtitle = "Sepal caracteristics per specie")  # Add a subtitle to the plot
 
 ```
-
 
 ### 3D
 
@@ -969,8 +1074,77 @@ for (i in 1:nrow(dataScatter)) {
 p
 
 ```
-## Pie charts
 
+## Radar plots
+
+```{r}
+dataRadarTemp <- data.frame(
+  TIME = rep(c("T0", "T3", "T6", "T9"), each = 100),
+  MO = c(runif(100, 1, 3), runif(100, 2, 5), runif(100, 1, 4), runif(100, 0, 2)),
+  SC = c(runif(100, 1, 4), runif(100, 0, 3), runif(100, 2, 5), runif(100, 2, 2.1)),
+  UA = c(runif(100, 2, 4), runif(100, 4, 5), runif(100, 4, 5), runif(100, 4, 5)),
+  PA = c(runif(100, 2, 2.5), runif(100, 3, 4), runif(100, 3, 5), runif(100, 4, 5)),
+  AD = c(runif(100, 1, 3), runif(100, 1, 3), runif(100, 1, 3), runif(100, 1, 3))
+) %>%
+  mutate(
+    TIME = factor(
+      TIME,
+      levels = c("T0", "T3", "T6", "T9"),
+      labels = c("T0", "T3", "T6", "T9")
+    )
+  )
+
+# Average by dimension and time point
+dataRadar <- data.frame(
+  MO = by(dataRadarTemp$MO, dataRadarTemp$TIME, mean),
+  SC = by(dataRadarTemp$SC, dataRadarTemp$TIME, mean),
+  UA = by(dataRadarTemp$UA, dataRadarTemp$TIME, mean),
+  PA = by(dataRadarTemp$PA, dataRadarTemp$TIME, mean),
+  AD = by(dataRadarTemp$AD, dataRadarTemp$TIME, mean)
+)
+
+# Adding a first line with the max and a second line with the min
+# Mandatory to use the function
+dataRadar <- rbind(rep(5,5), rep(0,5) , dataRadar)
+
+
+# Color vector
+# Converting colors in rgb, with alpha for trasnparency
+alpha1 <- 1*255
+alpha2 <- 0*255
+colors_border <- c(rgb(0, 82, 99, alpha1, maxColorValue = 255),
+                  rgb(125,175,140, alpha1, maxColorValue = 255),
+                  rgb(152,202,139, alpha1, maxColorValue = 255),
+                  rgb(193,229,227, alpha1, maxColorValue = 255))
+colors_in <- c(rgb(0, 82, 99, alpha2, maxColorValue = 255),
+                rgb(125,175,140, alpha2, maxColorValue = 255),
+                rgb(152,202,139, alpha2, maxColorValue = 255),
+               rgb(193,229,227, alpha2, maxColorValue = 255))
+
+
+dataRadar[2, ] <- rep(0,5)
+
+fmsb::radarchart(
+  dataRadar,
+  axistype = 1,
+  #custom polygon
+  pcol = colors_border ,
+  pfcol = colors_in ,
+  plwd = 4 ,
+  plty = 1,
+  #custom the grid
+  cglcol = "grey",
+  cglty = 1,
+  axislabcol = "grey",
+  caxislabels = seq(3, 5, .5),
+  cglwd = 0.8,
+  #custom labels
+  vlcex = 0.8,
+  vlabels = c("Mobility", "Selfcare", "Usual\nActivity", "Pain", "Anxiety\nDepression")
+)
+```
+
+## Pie charts
 
 ```{r}
 # Create data for the pie chart
@@ -998,12 +1172,11 @@ ggplot(mapping = aes(x = "", y = val, fill = group)) +
 
 ```
 
-
 # Regressions
-
 
 ## Survival curves
 
+### ggplot2::autoplot
 
 ```{r}
 # Simulate survival data
@@ -1028,7 +1201,7 @@ fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve
 ymax <- 30
 
 # Plot survival curves using autoplot from the ggplot2 framework
-autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +  # Start with a blank base plot
+ggplot2::autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +  # Start with a blank base plot
   geom_step(aes(linetype = strata, color = event), size = 0.8) +  # Add step lines by strata and event
   scale_linetype_manual(
     name = "Group",                     # Legend title for group
@@ -1071,44 +1244,6 @@ autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +  # Start with a blank
 
 ```
 
-
-```{r}
-# Simulate survival data for analysis
-n <- 1000  # Number of individuals
-dataSurvCurve <- data.frame(
-  id = 1:n,  # Unique identifier for each individual
-  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
-  event = c(
-    sample(0:1, n/2, prob = c(0.4, 0.6), replace = TRUE),  # First group: 40% censored, 60% events
-    sample(0:1, n/2, prob = c(0.7, 0.3), replace = TRUE)   # Second group: 70% censored, 30% events
-  ), 
-  # Event status: 0 = censored, 1 = event occurred
-  exposure = rep(c("Unexposed", "Exposed"), each = n/2)  # Exposure status: "Unexposed" or "Exposed"
-)
-
-# Fit survival curves stratified by exposure
-fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve)
-
-# Plot the survival curves using ggsurvplot
-ggsurvplot(
-  fit,                          # Survival fit object
-  data = dataSurvCurve,         # Data source
-  legend.title = "Group",       # Title for the legend
-  legend.labs = c("Exposed", "Unexposed"),  # Labels for legend groups
-  conf.int = TRUE,              # Display confidence intervals
-  censor = FALSE,               # Do not display censoring marks
-  xlab = "Follow up time (days)",  # Label for x-axis
-  ylab = "Non-hospitalisation probability", # Label for y-axis
-  break.time.by = 60,           # Breaks on the x-axis every 60 days
-  surv.scale = "percent",       # Scale survival probability as percentages
-  ylim = c(0, 1),               # Set y-axis limits (0% to 100%)
-  axes.offset = FALSE,          # Align axes at the origin
-  legend = c(0.12, 0.15)        # Position the legend within the plot
-)
-
-```
-
-
 ```{r}
 # Simulating survival data
 n <- 1000  # Number of individuals
@@ -1126,7 +1261,7 @@ fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve
 
 
 # Plot a survival curve with `autoplot` and enhance it with additional layers
-autoplot(fit, surv.linetype = 'blank', surv.colour = NA) + 
+ggplot2::autoplot(fit, surv.linetype = 'blank', surv.colour = NA) + 
   # Add step lines representing survival curves
   geom_step(
     aes(linetype = strata, color = event), # Map line type to `strata` and color to `event`
@@ -1191,6 +1326,114 @@ autoplot(fit, surv.linetype = 'blank', surv.colour = NA) +
   )
 ```
 
+### ggsurvfit::ggsurvfit
+
+```{r}
+data <- data.frame(
+  time = c(rnorm(90, 180, 60),rnorm(90, 130, 60)),
+  event = rbinom(180, 0:1, 0.7),
+  group = rep(c("MONO", "COMBO"), each = 90)
+)
+
+
+get_median_time <- function(dataSurv, lab) {
+  data <- dataSurv[dataSurv$group == lab,]
+  as.numeric(surv_median(surv_fit(
+    Surv(time = time, event = event) ~ 1, 
+    data = data
+  ))[2])
+}
+median1 <- get_median_time(data, "MONO")
+median2 <- get_median_time(data, "COMBO")
+
+ggsurvfit::survfit2(
+    Surv(time = time, event = event) ~ group, 
+    data = data
+  ) %>%
+    ggsurvfit::ggsurvfit() +
+    add_censor_mark() +
+    add_confidence_interval() +
+    scale_ggsurvfit(
+      x_scales = list(
+        limits = c(0, 365),
+        breaks = seq(0, 365, 30)
+      ),
+      y_scales = list(
+        expand = c(0,0)
+      )
+    ) +
+    add_risktable(
+      times = NULL,
+      risktable_stats = c("n.risk"),
+      risktable_group = c("auto", "strata", "risktable_stats"),
+      risktable_height = NULL,
+      stats_label = NULL,
+      combine_groups = FALSE,
+      theme = theme_risktable_default(),
+      size = 3.5
+    ) +
+    annotate("segment", 
+             x = 0, xend = median1, 
+             y = .5, yend = .5, 
+             colour = "gray70", lty = 2) +
+    annotate("segment", 
+           x = 0, xend = median2, 
+            y = .5, yend = .5, 
+            colour = "gray70", lty = 2) +
+    annotate("segment", 
+             x = median1, xend = median1, 
+             y = .5, yend = 0, 
+             colour = "gray70", lty = 2) +
+    annotate("segment", 
+             x = median2, xend = median2, 
+             y = .5, yend = 0, 
+             colour = "gray70", lty = 2) +
+    labs(
+      x = "Time in days",
+      y = "Probability of suvival"
+    )
+```
+
+
+### survminer::ggsurvplot
+
+```{r}
+# Simulate survival data for analysis
+n <- 1000  # Number of individuals
+dataSurvCurve <- data.frame(
+  id = 1:n,  # Unique identifier for each individual
+  time = as.numeric(sample(1:365, n, replace = TRUE)),  # Simulated follow-up time between 1 and 365 days
+  event = c(
+    sample(0:1, n/2, prob = c(0.4, 0.6), replace = TRUE),  # First group: 40% censored, 60% events
+    sample(0:1, n/2, prob = c(0.7, 0.3), replace = TRUE)   # Second group: 70% censored, 30% events
+  ), 
+  # Event status: 0 = censored, 1 = event occurred
+  exposure = rep(c("Unexposed", "Exposed"), each = n/2)  # Exposure status: "Unexposed" or "Exposed"
+)
+
+# Fit survival curves stratified by exposure
+fit <- survfit(Surv(time = time, event = event) ~ exposure, data = dataSurvCurve)
+
+# Plot the survival curves using ggsurvplot
+survminer::ggsurvplot(
+  fit,                          # Survival fit object
+  data = dataSurvCurve,         # Data source
+  legend.title = "Group",       # Title for the legend
+  legend.labs = c("Exposed", "Unexposed"),  # Labels for legend groups
+  conf.int = TRUE,              # Display confidence intervals
+  censor = FALSE,               # Do not display censoring marks
+  xlab = "Follow up time (days)",  # Label for x-axis
+  ylab = "Non-hospitalisation probability", # Label for y-axis
+  break.time.by = 60,           # Breaks on the x-axis every 60 days
+  surv.scale = "percent",       # Scale survival probability as percentages
+  ylim = c(0, 1),               # Set y-axis limits (0% to 100%)
+  axes.offset = FALSE,          # Align axes at the origin
+  legend = c(0.12, 0.15)        # Position the legend within the plot
+)
+
+```
+
+
 
 ```{r}
 # Create a data frame for survival analysis
@@ -1214,7 +1457,7 @@ fit.os <- survfit(Surv(os.time, os.status) ~ rx, data = dataSurvCurve)
 fits <- list(PFS = fit.pfs, OS = fit.os)
 
 # Plot the survival curves using ggsurvplot
-ggsurvplot(
+survminer::ggsurvplot(
   fits,                          # List of survival fits (PFS and OS)
   data = dataSurvCurve,          # Data used for plotting
   combine = TRUE,                # Combine PFS and OS plots into one
@@ -1232,11 +1475,10 @@ ggsurvplot(
 
 ```
 
-
 ```{r}
 fit <- survfit( Surv(time, status) ~ sex, data = colon)
 
-ggsurvplot_facet(fit, colon, facet.by = "rx",
+survminer::ggsurvplot_facet(fit, colon, facet.by = "rx",
                 palette = "jco",                # Combine PFS and OS plots into one
   censor = FALSE,                 # Use JCO color palette
   surv.scale = "percent",        # Display survival probabilities as percentages
@@ -1251,9 +1493,7 @@ ggsurvplot_facet(fit, colon, facet.by = "rx",
 )
 ```
 
-
 ## Forest plots
-
 
 ```{r}
 # Create the data frame for the forest plot
@@ -1326,7 +1566,6 @@ ggplot(dataForest) +
     aes(x = 5, y = reorder(mod, -id), label = dataForest$label), # Add text labels for estimates
   )
 ```
-
 
 ```{r}
 # Create the data frame for the forest plot
@@ -1421,7 +1660,6 @@ dataForest <- data.frame(
     )
 ```
 
-
 ```{r}
 # Create the data frame for the forest plot
 dataForest <- data.frame(
@@ -1488,12 +1726,9 @@ ggplot(dataForest) +
   theme(panel.grid.major.y = element_line(colour = "lightgray", linetype = "dotted")) # Add gridlines for readability
 ```
 
-
-# Epidemiology 
-
+# Epidemiology
 
 ## Epidemic curves
-
 
 ```{r}
 dataCurve <- data.frame(
@@ -1624,7 +1859,6 @@ ggplot(dataCurve) +
   ))
 ```
 
-
 ```{r}
 # Create a data frame for histogram visualization
 dataCurve <- data.frame(
@@ -1714,7 +1948,6 @@ ggplot(dataCurve) +
   )
 ```
 
-
 ```{r}
 # Create a data frame for the bar plot
 dataCurve <- data.frame(
@@ -1803,13 +2036,9 @@ ggplot(dataCurve) +
   )
 ```
 
-
-
 ## Care trajectories
 
-
-### Sankey 
-
+### Sankey
 
 ```{r}
 createSankeyData <- function(data, states, timesColumns) {
@@ -1964,7 +2193,6 @@ plotSankey(sankeyData$Nodes, sankeyData$Links, add.prop = TRUE)
 
 ### Carpet
 
-
 ```{r}
 # Create a dataset simulating treatment sequences
 carpetData <- data.frame(
@@ -2001,10 +2229,10 @@ seqCarpet <- seqdef(
 )
 
 # Define substitution costs using a constant method
-couts <- seqsubm(seqCarpet, method = "CONSTANT", cval = 2)
+couts <- TraMineR::seqsubm(seqCarpet, method = "CONSTANT", cval = 2)
 
 # Compute optimal matching distances
-seq.om <- seqdist(seqCarpet,
+seq.om <- TraMineR::seqdist(seqCarpet,
                   method = "OM",  # Optimal Matching (OM) method
                   indel = 1,      # Insertion/deletion cost
                   sm = couts)     # Substitution matrix
@@ -2016,15 +2244,15 @@ seq.dist <- hclust(as.dist(seq.om), method = "ward.D2")
 seq_cl <- factor(cutree(seq.dist, 3), labels = c("Class n°1", "Class n°2", "Class n°3"))
 
 # Plot individual sequence plots and group sequence plots side by side
-ggarrange(
-  ggseqiplot(seqCarpet, facet_ncol = 1, no.n = TRUE) +  # Individual plot
+ggpubr::ggarrange(
+  ggseqplot::ggseqiplot(seqCarpet, facet_ncol = 1, no.n = TRUE) +  # Individual plot
     theme(
       panel.spacing = unit(0.1, "lines"),  # Adjust panel spacing
       axis.text.y = element_text(colour = "white"),  # Hide y-axis text
       axis.ticks.y = element_line(colour = "white")  # Hide y-axis ticks
     ) +
     labs(y = ""),  # Remove y-axis label
-  ggseqiplot(  # Plot grouped sequences
+  ggseqplot::ggseqiplot(  # Plot grouped sequences
     seqCarpet,
     group = seq_cl,  # Group by clusters
     facet_ncol = 1,
@@ -2045,12 +2273,9 @@ ggarrange(
 
 ```
 
-
 ## Nested Data
 
-
-### Sunburst 
-
+### Sunburst
 
 ```{r}
 # Create a dataset for the sunburst chart
@@ -2088,8 +2313,6 @@ plot_ly(
 )
 
 ```
-
-
 
 ```{r}
 # Create a dataset for the sunburst chart with hierarchical relationships and node values
@@ -2137,9 +2360,7 @@ plot_ly(
 
 ```
 
-
 ### Treemap
-
 
 ```{r}
 # Create a data frame containing cause of death, details (subcategory), and occurrences
@@ -2182,7 +2403,7 @@ dataTreemap <- as.data.frame(t(apply(dataTreemap, 1, function(x) {
 dataTreemap$n <- as.numeric(dataTreemap$n)    # Convert the n column back to numeric after transformation
 
 # Generate the treemap
-treemap(
+treemap::treemap(
   dataTreemap,
   index = c("cause_of_death", "details"),      # Define hierarchical levels for the treemap
   vSize = "n",                                # Size of rectangles corresponds to the n column
@@ -2203,12 +2424,11 @@ treemap(
 
 ## Shape
 
-
 ### Raw
 
 ```{r}
 # Load the dataset from the specified file
-load("C:/Users/hugo.marthinet/Downloads/dataVisualizationPortfolio-main/dataVisualizationPortfolio-main/index.Rdata")
+load("C:/Users/hugo.marthinet/Downloads/index.Rdata")
 
 # Set a seed for reproducibility
 set.seed(123)
@@ -2232,7 +2452,7 @@ bodyMap <- sf_polygon(
 )
 
 # Visualize the body map with a choropleth map
-mf_map(
+mapsf::mf_map(
   x = bodyMap,  # Spatial object to plot
   type = "choro",  # Choropleth map type
   var = "freq",  # Variable to map (frequency of injuries)
@@ -2247,10 +2467,9 @@ mf_map(
 
 ### Weighted
 
-
 ```{r}
 # Load the dataset from the specified file
-load("C:/Users/hugo.marthinet/Downloads/dataVisualizationPortfolio-main/dataVisualizationPortfolio-main/index.Rdata")
+load("C:/Users/hugo.marthinet/Downloads/index.Rdata")
 
 # Set a seed for reproducibility
 set.seed(123)
@@ -2265,8 +2484,8 @@ freqTable <- data.frame(
 dataBodygram <- left_join(x = dataBodygram, y = freqTable)
 
 # Create a body map with cartogram distortion based on injury frequency
-bodyMap <- cartogram_cont(
-  sf_polygon(
+bodyMap <- cartogram::cartogram_cont(
+  sfheaders::sf_polygon(
     dataBodygram,
     x = "x",  # X-coordinates for the polygon vertices
     y = "y",  # Y-coordinates for the polygon vertices
@@ -2278,7 +2497,7 @@ bodyMap <- cartogram_cont(
 )
 
 # Visualize the distorted body map with a choropleth representation
-mf_map(
+mapsf::mf_map(
   x = bodyMap,  # Spatial object to plot (distorted body map)
   type = "choro",  # Choropleth map type
   var = "freq",  # Variable to map (frequency of injuries)
@@ -2291,9 +2510,9 @@ mf_map(
 )
 ```
 
-## Organs 
+## Organs
 
-Using the gganatogram package (https://github.com/jespermaag/gganatogram).
+Using the gganatogram package (<https://github.com/jespermaag/gganatogram>).
 
 ```{r}
 gganatogram(data=hgMale_key, fillOutline='#440154FF', organism='human', sex='male', fill="value") + theme_void() + scale_fill_viridis()
@@ -2316,4 +2535,3 @@ organPlot <- data.frame(organ = c("heart", "leukocyte", "nerve", "brain", "liver
 #> 
 gganatogram(data=organPlot, fillOutline='#a6bddb', organism='human', sex='male', fill="colour") + theme_void()
 ```
-
